@@ -86,6 +86,8 @@
   .wxrow{display:flex;gap:10px;align-items:flex-end;margin-top:10px}
   .wxfield{flex:1}
   .wxbtn{width:auto;flex:none;padding:13px 16px;font-size:15px;white-space:nowrap}
+  .gpsnote{font-size:11px;color:var(--dim);margin-top:5px;font-variant-numeric:tabular-nums;letter-spacing:.2px}
+  .gridlab{font-size:12px;font-weight:800;color:var(--dim);letter-spacing:.5px;margin-top:12px;margin-bottom:2px}
   .run-head{display:flex;align-items:center;gap:10px;margin-bottom:4px}
   .run-head .rt{font-weight:800;font-size:16px;flex:1}
   .run-head .del{color:var(--dim);font-size:13px;padding:4px 8px;cursor:pointer}
@@ -299,16 +301,11 @@ function renderSession(s){
           <input class="txt" style="margin-top:4px" inputmode="numeric" placeholder="— tap 📍 or type"
             value="${esc(run.ambient!=null?run.ambient:"")}"
             oninput="updRun('${s.id}','${run.id}','ambient',this.value)">
+          ${run.gps?`<div class="gpsnote">📍 ${esc(run.gps.lat)}, ${esc(run.gps.lon)} @ ${esc(run.gps.at||"")}</div>`:""}
         </div>
         <button class="btn accent2 wxbtn" onclick="grabWeather('${s.id}','${run.id}',this)">📍 Weather</button>
-      </div>
-      <div class="grid2">`;
-    TIRES.forEach(([k,lab])=>{
-      const setv=(run.set&&typeof run.set[k]==="number")?run.set[k]:null;
-      h+=tireStepper(s.id,run.id,k,lab,run.p[k],0.5,s.cold[k],setv);
-    });
-    h+=`</div>`;
-    // set (pre-run) pressure toggle
+      </div>`;
+    // set (pre-run) pressure toggle — sits ABOVE hot pressures (you set, then run)
     h+=`<div class="toggle-temps" onclick="toggleSet('${s.id}','${run.id}')">
       ${run.showSet?"▴ hide pre-run set pressure":"▾ set pre-run pressure (warm)"}</div>`;
     if(run.showSet){
@@ -319,6 +316,13 @@ function renderSession(s){
       });
       h+=`</div>`;
     }
+    h+=`<div class="gridlab">🔥 HOT — after run</div>
+      <div class="grid2">`;
+    TIRES.forEach(([k,lab])=>{
+      const setv=(run.set&&typeof run.set[k]==="number")?run.set[k]:null;
+      h+=tireStepper(s.id,run.id,k,lab,run.p[k],0.5,s.cold[k],setv);
+    });
+    h+=`</div>`;
     // temps toggle
     h+=`<div class="toggle-temps" onclick="toggleTemps('${s.id}','${run.id}')">
       ${run.showTemps?"▴ hide tire temps":"▾ add tire temps (pyrometer)"}</div>`;
@@ -612,6 +616,7 @@ function grabWeather(sid,rid,btn){
           if(t==null) throw new Error("no temp");
           const r=getS(sid).runs.find(x=>x.id===rid);
           r.ambient=String(t);
+          r.gps={lat:lat,lon:lon,at:nowTime()};
           // stamp the time too if empty, so the reading is anchored
           if(!r.time) r.time=nowTime();
           save();
@@ -657,7 +662,7 @@ function rowsFor(s){
   const rows=[];
   TIRES.forEach(([k,lab])=>{
     rows.push([s.date,"",s.type,s.track,s.ambient,s.trackTemp,"COLD",lab,
-      s.cold[k],"","","","","","","","",""]);
+      s.cold[k],"","","","","","","","","","",""]);
   });
   s.runs.forEach(run=>{
     TIRES.forEach(([k,lab])=>{
@@ -669,14 +674,15 @@ function rowsFor(s){
       const flag=tempFlag(t);
       const fl=flag==="over"?"OVER":flag==="under"?"UNDER":flag==="ok"?"OK":"";
       const amb=(run.ambient!=null&&run.ambient!=="")?run.ambient:s.ambient;
+      const lat=run.gps?run.gps.lat:"", lon=run.gps?run.gps.lon:"";
       rows.push([s.date,run.time||"",s.type,s.track,amb,s.trackTemp,run.label,lab,
-        hot,setv,cold,climbSet,climb,t.o,t.m,t.i,fl,run.notes||""]);
+        hot,setv,cold,climbSet,climb,t.o,t.m,t.i,fl,run.notes||"",lat,lon]);
     });
   });
   return rows;
 }
 const HEAD=["Date","Time","Type","Track","Ambient_F","TrackTemp_F","Session","Tire",
-  "PSI","SetPSI","ColdPSI","ClimbVsSet","Climb","Temp_Outer","Temp_Mid","Temp_Inner","Flag","Notes"];
+  "PSI","SetPSI","ColdPSI","ClimbVsSet","Climb","Temp_Outer","Temp_Mid","Temp_Inner","Flag","Notes","Lat","Lon"];
 function toCSV(rows){
   const all=[HEAD,...rows];
   return all.map(r=>r.map(c=>{
