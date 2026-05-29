@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0a0e14">
-<title>Tire Logger</title>
+<title>Tire Log — BRZ RT660+</title>
 <style>
   :root{
     --bg:#0a0e14; --panel:#141a24; --panel2:#1c2533; --line:#2a3547;
@@ -301,7 +301,7 @@ function renderSession(s){
           <input class="txt" style="margin-top:4px" inputmode="numeric" placeholder="— tap 📍 or type"
             value="${esc(run.ambient!=null?run.ambient:"")}"
             oninput="updRun('${s.id}','${run.id}','ambient',this.value)">
-          ${run.gps?`<div class="gpsnote">📍 ${esc(run.gps.lat)}, ${esc(run.gps.lon)} @ ${esc(run.gps.at||"")}</div>`:""}
+          ${run.gps?`<div class="gpsnote">📍 ${run.gps.place?esc(run.gps.place)+" · ":""}${esc(run.gps.lat)}, ${esc(run.gps.lon)} @ ${esc(run.gps.at||"")}</div>`:""}
         </div>
         <button class="btn accent2 wxbtn" onclick="grabWeather('${s.id}','${run.id}',this)">📍 Weather</button>
       </div>`;
@@ -621,7 +621,24 @@ function grabWeather(sid,rid,btn){
           if(!r.time) r.time=nowTime();
           save();
           setBtn("✓ "+t+"°F");
-          setTimeout(()=>{render();},700);
+          // reverse-geocode for nearest city/state (independent; failure is harmless)
+          const geoUrl="https://api.bigdatacloud.net/data/reverse-geocode-client?latitude="+
+            lat+"&longitude="+lon+"&localityLanguage=en";
+          fetch(geoUrl)
+            .then(gr=>gr.ok?gr.json():null)
+            .then(g=>{
+              if(g){
+                const city=g.city||g.locality||"";
+                const state=g.principalSubdivision||"";
+                const place=[city,state].filter(Boolean).join(", ");
+                if(place){
+                  const rr=getS(sid).runs.find(x=>x.id===rid);
+                  if(rr&&rr.gps){rr.gps.place=place;save();}
+                }
+              }
+            })
+            .catch(()=>{})
+            .finally(()=>{setTimeout(()=>{render();},700);});
         })
         .catch(e=>{
           // no signal / API down — fail soft, keep manual entry
@@ -662,7 +679,7 @@ function rowsFor(s){
   const rows=[];
   TIRES.forEach(([k,lab])=>{
     rows.push([s.date,"",s.type,s.track,s.ambient,s.trackTemp,"COLD",lab,
-      s.cold[k],"","","","","","","","","","",""]);
+      s.cold[k],"","","","","","","","","","","",""]);
   });
   s.runs.forEach(run=>{
     TIRES.forEach(([k,lab])=>{
@@ -675,14 +692,15 @@ function rowsFor(s){
       const fl=flag==="over"?"OVER":flag==="under"?"UNDER":flag==="ok"?"OK":"";
       const amb=(run.ambient!=null&&run.ambient!=="")?run.ambient:s.ambient;
       const lat=run.gps?run.gps.lat:"", lon=run.gps?run.gps.lon:"";
+      const place=run.gps&&run.gps.place?run.gps.place:"";
       rows.push([s.date,run.time||"",s.type,s.track,amb,s.trackTemp,run.label,lab,
-        hot,setv,cold,climbSet,climb,t.o,t.m,t.i,fl,run.notes||"",lat,lon]);
+        hot,setv,cold,climbSet,climb,t.o,t.m,t.i,fl,run.notes||"",lat,lon,place]);
     });
   });
   return rows;
 }
 const HEAD=["Date","Time","Type","Track","Ambient_F","TrackTemp_F","Session","Tire",
-  "PSI","SetPSI","ColdPSI","ClimbVsSet","Climb","Temp_Outer","Temp_Mid","Temp_Inner","Flag","Notes","Lat","Lon"];
+  "PSI","SetPSI","ColdPSI","ClimbVsSet","Climb","Temp_Outer","Temp_Mid","Temp_Inner","Flag","Notes","Lat","Lon","Location"];
 function toCSV(rows){
   const all=[HEAD,...rows];
   return all.map(r=>r.map(c=>{
