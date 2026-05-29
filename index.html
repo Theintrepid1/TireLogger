@@ -158,7 +158,7 @@ function getS(id){return DB.sessions.find(s=>s.id===id);}
 
 function newSession(){
   const s={id:uid(),date:todayStr(),type:"track",track:"",ambient:"",trackTemp:"",
-    cold:{FL:27,FR:27,RL:27,RR:27},coldTemp:"",laps:"",runs:[]};
+    cold:{FL:27,FR:27,RL:27,RR:27},coldTemp:{FL:"",FR:"",RL:"",RR:""},laps:"",runs:[]};
   DB.sessions.unshift(s);save();view={screen:"session",sid:s.id};render();
 }
 function nowTime(){const d=new Date();return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");}
@@ -288,11 +288,17 @@ function renderSession(s){
     h+=tireStepper(s.id,"cold",k,lab,s.cold[k],0.5,null);
   });
   h+=`</div>
-    <div style="margin-top:12px">
+    <div style="margin-top:14px">
       <label class="fl">❄ Cold Tire Temp °F (optional)</label>
-      <input class="txt" inputmode="numeric" placeholder="pyrometer reading before first run"
-        value="${esc(s.coldTemp||"")}" oninput="upd('${s.id}','coldTemp',this.value)">
-      <p class="muted" style="margin-top:6px">Thermal baseline — captures how warm the tires start. Builds data for predicting set pressures later.</p>
+      <p class="muted" style="margin:4px 0 8px">Per corner — sun on one side warms those tires more. Builds data for predicting set pressures later.</p>
+      <div class="grid2">`;
+  TIRES.forEach(([k,lab])=>{
+    const cv=(s.coldTemp&&s.coldTemp[k]!=null)?s.coldTemp[k]:"";
+    h+=`<div class="tire"><div class="lab">${lab} COLD °F</div>
+      <input class="tinp" inputmode="numeric" placeholder="—" value="${esc(cv)}"
+        oninput="setColdTemp('${s.id}','${k}',this.value)"></div>`;
+  });
+  h+=`</div>
     </div>
   </div>`;
   // runs
@@ -571,6 +577,13 @@ function tempFlag(t){
 /* ---------- mutations ---------- */
 function setType(id,t){getS(id).type=t;save();render();}
 function upd(id,f,v){getS(id)[f]=v;save();}
+function setColdTemp(sid,tk,v){
+  const s=getS(sid);
+  // migrate old string-format coldTemp to per-tire object if needed
+  if(s.coldTemp==null||typeof s.coldTemp!=="object") s.coldTemp={FL:"",FR:"",RL:"",RR:""};
+  s.coldTemp[tk]=v.replace(/[^0-9.]/g,"");
+  save();
+}
 function updRun(sid,rid,f,v){const r=getS(sid).runs.find(x=>x.id===rid);r[f]=v;save();}
 function step(sid,rk,tk,d){
   const s=getS(sid);
@@ -716,10 +729,16 @@ function esc(s){return (s==null?"":String(s)).replace(/"/g,"&quot;").replace(/</
 /* ---------- CSV export ---------- */
 function rowsFor(s){
   const rows=[];
-  const ct=s.coldTemp||"", lp=s.laps||"";
+  const lp=s.laps||"";
+  // per-tire cold temp; tolerate old single-string format
+  const ctFor=(k)=>{
+    if(s.coldTemp==null) return "";
+    if(typeof s.coldTemp==="object") return s.coldTemp[k]!=null?s.coldTemp[k]:"";
+    return s.coldTemp; // legacy single value applies to all tires
+  };
   TIRES.forEach(([k,lab])=>{
     rows.push([s.date,"",s.type,s.track,s.ambient,s.trackTemp,"COLD",lab,
-      s.cold[k],"","","","","","","","","","","","",ct,lp,""]);
+      s.cold[k],"","","","","","","","","","","","",ctFor(k),lp,""]);
   });
   s.runs.forEach(run=>{
     TIRES.forEach(([k,lab])=>{
@@ -735,7 +754,7 @@ function rowsFor(s){
       const place=run.gps&&run.gps.place?run.gps.place:"";
       const cond=run.gps&&run.gps.cond?run.gps.cond:"";
       rows.push([s.date,run.time||"",s.type,s.track,amb,s.trackTemp,run.label,lab,
-        hot,setv,cold,climbSet,climb,t.o,t.m,t.i,fl,run.notes||"",lat,lon,place,ct,lp,cond]);
+        hot,setv,cold,climbSet,climb,t.o,t.m,t.i,fl,run.notes||"",lat,lon,place,ctFor(k),lp,cond]);
     });
   });
   return rows;
