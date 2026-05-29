@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0e14">
+<title>Tire Log — BRZ RT660+</title>
+<style>
+  :root{
+    --bg:#0a0e14; --panel:#141a24; --panel2:#1c2533; --line:#2a3547;
+    --ink:#f4f7fb; --dim:#8da0b8; --accent:#ff3b2f; --accent2:#23a6ff;
+    --ok:#26d07c; --over:#ff5a3c; --under:#ffb43c;
+    --tap:#28344a;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:17px;line-height:1.3;overscroll-behavior:none;}
+  body{padding:0 0 96px;max-width:520px;margin:0 auto;min-height:100vh}
+  .top{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,#0a0e14,#0a0e14ee);
+    backdrop-filter:blur(6px);padding:14px 16px 10px;border-bottom:2px solid var(--line);
+    display:flex;align-items:center;gap:10px}
+  .top h1{font-size:18px;font-weight:800;letter-spacing:.3px;flex:1}
+  .top .badge{font-size:11px;font-weight:700;color:var(--bg);background:var(--accent);
+    padding:3px 8px;border-radius:6px;letter-spacing:.5px}
+  .wrap{padding:16px}
+  .muted{color:var(--dim);font-size:13px}
+  .btn{display:flex;align-items:center;justify-content:center;gap:8px;
+    border:none;border-radius:14px;font-size:17px;font-weight:700;color:var(--ink);
+    background:var(--tap);padding:16px;width:100%;cursor:pointer;letter-spacing:.3px}
+  .btn:active{transform:scale(.98)}
+  .btn.primary{background:var(--accent);color:#fff}
+  .btn.accent2{background:var(--accent2);color:#04121f}
+  .btn.ghost{background:transparent;border:1.5px solid var(--line);color:var(--dim);font-weight:600}
+  .btn.danger{border-color:var(--accent);color:var(--accent);margin-top:6px}
+  .btn.danger:active{background:var(--accent);color:#fff}
+  .btn.sm{padding:11px;font-size:14px;border-radius:11px}
+  .row{display:flex;gap:10px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;
+    padding:16px;margin-bottom:14px}
+  .card h2{font-size:15px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;
+    color:var(--dim);margin-bottom:4px}
+  .sess-item{background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:15px;margin-bottom:11px;cursor:pointer;display:flex;align-items:center;gap:12px}
+  .sess-item:active{background:var(--panel2)}
+  .sess-item .typchip{font-size:10px;font-weight:800;padding:4px 8px;border-radius:7px;letter-spacing:.6px}
+  .typ-track{background:var(--accent2);color:#04121f}
+  .typ-autox{background:var(--under);color:#1a1206}
+  .sess-item .meta{flex:1}
+  .sess-item .meta .t{font-weight:700;font-size:16px}
+  .sess-item .arrow{color:var(--dim);font-size:22px}
+  /* tire grid */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:6px}
+  .tire{background:var(--panel2);border:1px solid var(--line);border-radius:15px;padding:10px 8px}
+  .tire .lab{font-size:12px;font-weight:800;color:var(--dim);text-align:center;letter-spacing:.8px;margin-bottom:5px}
+  .stepper{display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .stepper button{width:50px;height:50px;border:none;border-radius:13px;background:var(--tap);
+    color:var(--ink);font-size:28px;font-weight:700;cursor:pointer;flex:none;line-height:1}
+  .stepper button:active{background:var(--accent);color:#fff}
+  .stepper .val{flex:1;text-align:center;font-size:32px;font-weight:800;
+    font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+  .stepper .val small{font-size:12px;color:var(--dim);font-weight:600;display:block;margin-top:-3px}
+  .climb{text-align:center;font-size:12px;font-weight:700;margin-top:5px;padding:3px;border-radius:7px}
+  .climb.pos{color:var(--ok)} .climb.neg{color:var(--under)}
+  .climb .pos{color:var(--ok)} .climb .neg{color:var(--under)}
+  /* temps */
+  .temprow{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+  .tcell{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 3px;text-align:center}
+  .tcell .tl{font-size:10px;color:var(--dim);font-weight:800;letter-spacing:.5px}
+  .tinp{width:100%;background:transparent;border:none;color:var(--ink);
+    font-size:22px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;
+    margin-top:3px;padding:4px 0;min-width:0}
+  .tinp::placeholder{color:var(--line)}
+  .flag{margin-top:7px;text-align:center;font-size:11px;font-weight:800;letter-spacing:.5px;padding:5px;border-radius:8px}
+  .flag.ok{background:rgba(38,208,124,.15);color:var(--ok)}
+  .flag.over{background:rgba(255,90,60,.15);color:var(--over)}
+  .flag.under{background:rgba(255,180,60,.15);color:var(--under)}
+  .flag.none{background:transparent;color:var(--dim)}
+  .toggle-temps{font-size:15px;color:var(--accent2);font-weight:700;text-align:center;
+    margin-top:10px;cursor:pointer;padding:14px;border:1.5px solid var(--line);
+    border-radius:13px;background:var(--panel2);letter-spacing:.2px}
+  .toggle-temps:active{background:var(--tap)}
+  .run-head{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+  .run-head .rt{font-weight:800;font-size:16px;flex:1}
+  .run-head .del{color:var(--dim);font-size:13px;padding:4px 8px;cursor:pointer}
+  input.txt,select.txt{width:100%;background:var(--panel2);border:1px solid var(--line);
+    border-radius:11px;color:var(--ink);font-size:16px;padding:13px;margin-top:6px;font-family:inherit}
+  label.fl{font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.4px;text-transform:uppercase}
+  .seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:13px;padding:4px;gap:4px;margin-top:6px}
+  .seg button{flex:1;border:none;background:transparent;color:var(--dim);font-weight:700;
+    font-size:15px;padding:12px;border-radius:10px;cursor:pointer}
+  .seg button.on{background:var(--accent);color:#fff}
+  .seg button.on.ax{background:var(--under);color:#1a1206}
+  .fab{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;width:calc(100% - 32px);
+    max-width:488px;z-index:40}
+  .back{font-size:24px;color:var(--dim);cursor:pointer;padding:0 4px 0 0;line-height:1}
+  .small-note{font-size:11px;color:var(--dim);text-align:center;margin-top:6px}
+  .hide{display:none!important}
+  .ref{font-size:13px;color:var(--dim);line-height:1.5}
+  .ref b{color:var(--ink)}
+  . amb{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  /* analysis */
+  .tgtrow{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:6px}
+  .tgtbox{background:var(--panel2);border:1px solid var(--line);border-radius:15px;padding:10px 8px}
+  .tgtlab{font-size:12px;font-weight:800;color:var(--dim);text-align:center;letter-spacing:.8px;margin-bottom:5px}
+  .anum{text-align:center;font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.5px;margin-top:2px}
+  .anum .aunit{font-size:11px;color:var(--dim);font-weight:700;margin-left:3px;letter-spacing:.3px}
+  .asub{text-align:center;font-size:11px;color:var(--dim);font-weight:600;margin-top:1px}
+  .trend{text-align:center;font-size:11px;color:var(--accent2);font-weight:700;margin-top:6px;font-variant-numeric:tabular-nums;letter-spacing:.2px}
+  .tspread{text-align:center;font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:2px}
+  .tline{display:flex;gap:10px;margin-top:10px}
+  .tline:first-of-type{margin-top:4px}
+  .tdot{width:10px;height:10px;border-radius:50%;background:var(--accent);margin-top:6px;flex:none;box-shadow:0 0 0 3px rgba(255,59,47,.15)}
+  .tbody{flex:1;border-left:2px solid var(--line);padding:0 0 4px 12px;margin-left:-1px}
+  .thead{font-size:15px}
+  .tnote{font-size:14px;margin-top:3px;line-height:1.4}
+  /* backup nudge */
+  .nudge{display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,#3a2410,#2a1a08);
+    border:1px solid var(--under);border-radius:16px;padding:14px;margin-bottom:14px;cursor:pointer}
+  .nudge:active{transform:scale(.99)}
+  .nudgeIcon{font-size:24px;color:var(--under);flex:none}
+  .nudgeBody{flex:1}
+  .nudgeT{font-weight:800;font-size:15px;color:var(--ink)}
+  .nudgeS{font-size:13px;color:var(--dim);margin-top:2px}
+  .nudgeArr{color:var(--under);font-size:22px;font-weight:700}
+</style>
+</head>
+<body>
+<div class="top">
+  <span id="backBtn" class="back hide">‹</span>
+  <h1 id="title">Tire Log</h1>
+  <span class="badge">RT660+</span>
+</div>
+<div id="app" class="wrap"></div>
+<div id="fab" class="fab"></div>
+
+<script>
+const TIRES=[["FL","Front L"],["FR","Front R"],["RL","Rear L"],["RR","Rear R"]];
+const KEY="brz_tire_log_v1";
+let DB={sessions:[]};
+let view={screen:"home",sid:null};
+let lastScreenKey="";
+
+function load(){try{const r=localStorage.getItem(KEY);if(r)DB=JSON.parse(r);}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(DB));}catch(e){alert("Storage error — export your data to be safe.");}}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function todayStr(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function getS(id){return DB.sessions.find(s=>s.id===id);}
+
+function newSession(){
+  const s={id:uid(),date:todayStr(),type:"track",track:"",ambient:"",trackTemp:"",
+    cold:{FL:27,FR:27,RL:27,RR:27},runs:[]};
+  DB.sessions.unshift(s);save();view={screen:"session",sid:s.id};render();
+}
+function nowTime(){const d=new Date();return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");}
+function addRun(s){
+  const base=s.runs.length?{...s.runs[s.runs.length-1].p}:{...s.cold};
+  s.runs.push({id:uid(),label:"Run "+(s.runs.length+1),time:nowTime(),p:{...base},
+    temps:{FL:null,FR:null,RL:null,RR:null},showTemps:false});
+  save();render();
+}
+
+/* ---------- rendering ---------- */
+function render(){
+  const back=document.getElementById("backBtn");
+  const app=document.getElementById("app");
+  const fab=document.getElementById("fab");
+  if(view.screen==="home"){
+    document.getElementById("title").textContent="Tire Log";
+    back.classList.add("hide");
+    app.innerHTML=renderHome();
+    fab.innerHTML=`<button class="btn primary" onclick="newSession()">＋ New Session</button>`;
+  }else if(view.screen==="session"){
+    const s=getS(view.sid);
+    document.getElementById("title").textContent=(s.track||"Session");
+    back.classList.remove("hide");
+    back.onclick=()=>{view={screen:"home"};render();};
+    app.innerHTML=renderSession(s);
+    fab.innerHTML=`<div class="row">
+      <button class="btn ghost" style="flex:1" onclick="view={screen:'analysis',sid:'${s.id}'};render()">📊 Analyze</button>
+      <button class="btn accent2" style="flex:1" onclick="exportOne('${s.id}')">⬇ CSV</button>
+      <button class="btn primary" style="flex:1.3" onclick="addRun(getS('${s.id}'))">＋ Run</button></div>`;
+  }else if(view.screen==="analysis"){
+    const s=getS(view.sid);
+    document.getElementById("title").textContent="Analysis";
+    back.classList.remove("hide");
+    back.onclick=()=>{view={screen:"session",sid:s.id};render();};
+    app.innerHTML=renderAnalysis(s);
+    fab.innerHTML=`<button class="btn primary" onclick="view={screen:'session',sid:'${s.id}'};render()">‹ Back to logging</button>`;
+  }
+  const screenKey=view.screen+":"+(view.sid||"");
+  if(screenKey!==lastScreenKey){window.scrollTo(0,0);lastScreenKey=screenKey;}
+}
+
+function renderHome(){
+  let h="";
+  if(!DB.sessions.length){
+    h+=`<div class="card"><h2>Welcome</h2>
+      <p class="muted">Tap <b style="color:var(--ink)">New Session</b> below to start logging.
+      Set a cold baseline before your first run, then add a run after each session for hot pressures
+      and optional pyrometer temps. Everything saves to this phone and works with no signal.</p></div>`;
+  }
+  if(needsBackupNudge()){
+    h+=`<div class="nudge" onclick="backupAll()">
+      <div class="nudgeIcon">⚠</div>
+      <div class="nudgeBody">
+        <div class="nudgeT">Back up your data</div>
+        <div class="nudgeS">${backupAgeText()} · tap to save a copy</div>
+      </div>
+      <div class="nudgeArr">›</div>
+    </div>`;
+  }
+  h+=`<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px">
+      <div style="font-weight:800;font-size:14px;letter-spacing:.5px;color:var(--dim)">SESSIONS</div>
+      <div style="flex:1"></div>
+      ${DB.sessions.length?`<span class="muted" onclick="exportAll()" style="color:var(--accent2);font-weight:700">Export all ⬇</span>`:""}
+    </div>`;
+  DB.sessions.forEach(s=>{
+    const tchip=s.type==="track"?"typ-track":"typ-autox";
+    const tlab=s.type==="track"?"TRACK":"AUTOX";
+    h+=`<div class="sess-item" onclick="view={screen:'session',sid:'${s.id}'};render()">
+      <span class="typchip ${tchip}">${tlab}</span>
+      <div class="meta"><div class="t">${s.track||"(untitled)"}</div>
+        <div class="muted">${s.date} · ${s.runs.length} run${s.runs.length===1?"":"s"}</div></div>
+      <span class="arrow">›</span></div>`;
+  });
+  h+=`<div class="card" style="margin-top:16px"><h2>Quick Reference</h2>
+    <p class="ref">
+    <b>Track:</b> aim ~31–32 psi hot · start ~26–27 cold · climb +4–6 psi<br>
+    <b>Autocross:</b> ~30 F / 29 R · climb only +1–3 psi (set warmer cold)<br>
+    <b>Read hot</b> within 1–2 min of coming in.<br>
+    <b>Temps O/M/I:</b> center hotter = over (drop psi) · edges hotter = under (add psi) · even = dialed.
+    </p></div>`;
+  h+=`<div class="card"><h2>💾 Backup</h2>
+    <p class="muted" style="margin-bottom:10px">A full JSON backup that survives a browser clear or phone wipe. Restore merges into your current data.</p>
+    <div class="row">
+      <button class="btn accent2 sm" style="flex:1" onclick="backupAll()">⬇ Backup all</button>
+      <button class="btn ghost sm" style="flex:1" onclick="triggerRestore()">⬆ Restore</button>
+    </div>
+    <div class="muted" style="text-align:center;margin-top:8px;font-size:12px">${backupAgeText()}</div>
+    <input type="file" id="restoreFile" accept=".json,application/json" style="display:none" onchange="handleRestore(event)">
+  </div>`;
+  return h;
+}
+
+function renderSession(s){
+  let h="";
+  // meta
+  h+=`<div class="card">
+    <div class="seg">
+      <button class="${s.type==='track'?'on':''}" onclick="setType('${s.id}','track')">Track</button>
+      <button class="${s.type==='autocross'?'on ax':''}" onclick="setType('${s.id}','autocross')">Autocross</button>
+    </div>
+    <div style="margin-top:12px">
+      <label class="fl">Track / Event</label>
+      <input class="txt" placeholder="e.g. North Wilkesboro" value="${esc(s.track)}"
+        oninput="upd('${s.id}','track',this.value)">
+    </div>
+    <div class="row" style="margin-top:10px">
+      <div style="flex:1"><label class="fl">Date</label>
+        <input class="txt" value="${esc(s.date)}" oninput="upd('${s.id}','date',this.value)"></div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <div style="flex:1"><label class="fl">Ambient °F (optional)</label>
+        <input class="txt" inputmode="numeric" placeholder="fill later" value="${esc(s.ambient)}" oninput="upd('${s.id}','ambient',this.value)"></div>
+      <div style="flex:1"><label class="fl">Track °F (optional)</label>
+        <input class="txt" inputmode="numeric" placeholder="fill later" value="${esc(s.trackTemp)}" oninput="upd('${s.id}','trackTemp',this.value)"></div>
+    </div>
+    <p class="muted" style="margin-top:8px">Leave temps blank — each run logs a timestamp so you can pull accurate ambient/track temps from a weather source afterward and enter them in Excel.</p>
+  </div>`;
+  // cold baseline
+  h+=`<div class="card">
+    <h2>❄ Cold Baseline (PSI)</h2>
+    <p class="muted" style="margin-bottom:4px">Set before your first run. Used to calc climb.</p>
+    <div class="grid2">`;
+  TIRES.forEach(([k,lab])=>{
+    h+=tireStepper(s.id,"cold",k,lab,s.cold[k],0.5,null);
+  });
+  h+=`</div></div>`;
+  // runs
+  s.runs.forEach((run,idx)=>{
+    h+=`<div class="card">
+      <div class="run-head">
+        <input class="txt" style="margin:0;flex:1.6;font-weight:800;padding:9px"
+          value="${esc(run.label)}" oninput="updRun('${s.id}','${run.id}','label',this.value)">
+        <input class="txt" style="margin:0;flex:1;padding:9px;text-align:center" inputmode="text"
+          placeholder="time" value="${esc(run.time||"")}" oninput="updRun('${s.id}','${run.id}','time',this.value)">
+        <span class="del" onclick="delRun('${s.id}','${run.id}')">✕</span>
+      </div>
+      <div class="grid2">`;
+    TIRES.forEach(([k,lab])=>{
+      const setv=(run.set&&typeof run.set[k]==="number")?run.set[k]:null;
+      h+=tireStepper(s.id,run.id,k,lab,run.p[k],0.5,s.cold[k],setv);
+    });
+    h+=`</div>`;
+    // set (pre-run) pressure toggle
+    h+=`<div class="toggle-temps" onclick="toggleSet('${s.id}','${run.id}')">
+      ${run.showSet?"▴ hide pre-run set pressure":"▾ set pre-run pressure (warm)"}</div>`;
+    if(run.showSet){
+      h+=`<p class="muted" style="margin:-2px 0 6px;text-align:center">Where you set them before this run. Climb shows vs set when present.</p><div class="grid2">`;
+      TIRES.forEach(([k,lab])=>{
+        const setv=(run.set&&typeof run.set[k]==="number")?run.set[k]:(run.set?run.set[k]:s.cold[k]);
+        h+=setStepper(s.id,run.id,k,lab,setv);
+      });
+      h+=`</div>`;
+    }
+    // temps toggle
+    h+=`<div class="toggle-temps" onclick="toggleTemps('${s.id}','${run.id}')">
+      ${run.showTemps?"▴ hide tire temps":"▾ add tire temps (pyrometer)"}</div>`;
+    if(run.showTemps){
+      h+=`<div class="grid2">`;
+      TIRES.forEach(([k,lab])=>{
+        h+=tempCell(s.id,run.id,k,lab,run.temps[k]);
+      });
+      h+=`</div>`;
+    }
+    h+=`<div style="margin-top:10px">
+      <label class="fl">Setup notes / changes (optional)</label>
+      <textarea class="txt" rows="2" style="resize:vertical;min-height:46px"
+        placeholder="e.g. front bar to stiff, -2 psi RR, tires greasy by lap 3"
+        oninput="updRun('${s.id}','${run.id}','notes',this.value)">${esc(run.notes||"")}</textarea>
+    </div>`;
+    h+=`</div>`;
+  });
+  if(!s.runs.length){
+    h+=`<p class="small-note">No runs yet — tap “Add Run” after your first session.</p>`;
+  }
+  h+=`<button class="btn ghost danger" onclick="delSession('${s.id}')">🗑 Delete this session</button>`;
+  return h;
+}
+
+/* ---------- ANALYSIS ---------- */
+// default reference targets — a STARTING POINT, fully overridable per session.
+function defaultTargets(type){
+  return type==="autocross"
+    ? {front:30, rear:29}   // autox ref
+    : {front:31.5, rear:31.5}; // track ref (~31–32)
+}
+function getTargets(s){
+  if(!s.targets) s.targets=defaultTargets(s.type);
+  return s.targets;
+}
+function bumpTarget(sid,axle,d){
+  const s=getS(sid); const t=getTargets(s);
+  let nv=Math.round((t[axle]+d)*10)/10;
+  if(nv<10)nv=10; if(nv>50)nv=50;
+  t[axle]=nv; save(); render();
+}
+function resetTargets(sid){
+  const s=getS(sid); s.targets=defaultTargets(s.type); save(); render();
+}
+
+function renderAnalysis(s){
+  const t=getTargets(s);
+  let h="";
+
+  // header / philosophy reminder
+  h+=`<div class="card">
+    <h2>📊 ${esc(s.track||"Session")} — Analysis</h2>
+    <p class="muted">${s.date} · ${s.type==="track"?"Track":"Autocross"} · ${s.runs.length} run${s.runs.length===1?"":"s"}.
+    Targets below are a <b style="color:var(--ink)">movable reference</b>, not a rule. Chase feel + even temps; set the line to whatever's actually winning for you.</p>
+  </div>`;
+
+  if(!s.runs.length){
+    h+=`<p class="small-note">No runs logged yet — climb and temp analysis appears once you add runs.</p>`;
+    return h;
+  }
+
+  // ---- adjustable target line ----
+  h+=`<div class="card">
+    <h2>🎯 Your Target Line (PSI hot)</h2>
+    <div class="tgtrow">
+      <div class="tgtbox">
+        <div class="tgtlab">FRONT</div>
+        <div class="stepper">
+          <button onclick="bumpTarget('${s.id}','front',-0.5)">−</button>
+          <div class="val">${fmt(t.front)}<small>psi</small></div>
+          <button onclick="bumpTarget('${s.id}','front',0.5)">＋</button>
+        </div>
+      </div>
+      <div class="tgtbox">
+        <div class="tgtlab">REAR</div>
+        <div class="stepper">
+          <button onclick="bumpTarget('${s.id}','rear',-0.5)">−</button>
+          <div class="val">${fmt(t.rear)}<small>psi</small></div>
+          <button onclick="bumpTarget('${s.id}','rear',0.5)">＋</button>
+        </div>
+      </div>
+    </div>
+    <div class="toggle-temps" onclick="resetTargets('${s.id}')">↺ reset to ${s.type==="track"?"track":"autox"} reference</div>
+  </div>`;
+
+  // ---- per-tire climb tracker ----
+  h+=`<div class="card">
+    <h2>🌡 Pressure Climb by Corner</h2>
+    <p class="muted" style="margin-bottom:8px">Cold → latest hot, and gap to your target line. Gap is info, not judgment.</p>
+    <div class="grid2">`;
+  TIRES.forEach(([k,lab])=>{
+    const cold=s.cold[k];
+    const last=s.runs[s.runs.length-1];
+    const hot=last.p[k];
+    const axle=(k==="FL"||k==="FR")?"front":"rear";
+    const tgt=t[axle];
+    const climb=(typeof cold==="number"&&typeof hot==="number")?Math.round((hot-cold)*10)/10:null;
+    const gap=(typeof hot==="number")?Math.round((hot-tgt)*10)/10:null;
+    // build sparkline-ish trend of hot across runs
+    const series=s.runs.map(r=>r.p[k]).filter(v=>typeof v==="number");
+    // equilibrium: climb vs the set pressure on the latest run that has one
+    const lastSet=(last.set&&typeof last.set[k]==="number")?last.set[k]:null;
+    const vsSet=(lastSet!=null&&typeof hot==="number")?Math.round((hot-lastSet)*10)/10:null;
+    let eqHtml="";
+    if(vsSet!=null){
+      let eqCls="under", eqTxt=(vsSet>=0?"+":"")+vsSet+" vs set";
+      if(Math.abs(vsSet)<0.6){eqCls="ok";eqTxt="≈ equilibrium ("+(vsSet>=0?"+":"")+vsSet+")";}
+      else if(vsSet>0){eqCls="over";}
+      eqHtml=`<div class="flag ${eqCls}" style="margin-top:5px">${eqTxt}</div>`;
+    }
+    let gapTxt="—", gapCls="none";
+    if(gap!=null){
+      if(Math.abs(gap)<0.6){gapCls="ok";gapTxt="on target";}
+      else if(gap>0){gapCls="over";gapTxt="+"+gap+" vs target";}
+      else {gapCls="under";gapTxt=gap+" vs target";}
+    }
+    h+=`<div class="tire">
+      <div class="lab">${lab}</div>
+      <div class="anum">${fmt(hot)}<span class="aunit">psi hot</span></div>
+      <div class="asub">${lastSet!=null?"set "+fmt(lastSet)+" · ":""}cold ${fmt(cold)} · climb ${climb!=null?(climb>=0?"+":"")+climb:"—"}</div>
+      <div class="flag ${gapCls}">${gapTxt}</div>
+      ${eqHtml}
+      ${series.length>1?`<div class="trend">${series.map(v=>fmt(v)).join(" → ")}</div>`:""}
+    </div>`;
+  });
+  h+=`</div></div>`;
+
+  // ---- temp spread (truth-teller) ----
+  const runsWithTemps=s.runs.filter(r=>TIRES.some(([k])=>tempFlag(r.temps[k])!=null));
+  if(runsWithTemps.length){
+    h+=`<div class="card">
+      <h2>🔥 Tire Temp Spread <span class="muted" style="text-transform:none;font-weight:600">— the real signal</span></h2>
+      <p class="muted" style="margin-bottom:8px">Even O/M/I = dialed, whatever the gauge says. This beats the psi target every time.</p>`;
+    const last=runsWithTemps[runsWithTemps.length-1];
+    h+=`<p class="muted" style="margin-bottom:6px">Latest with temps: <b style="color:var(--ink)">${esc(last.label)}</b></p>
+      <div class="grid2">`;
+    TIRES.forEach(([k,lab])=>{
+      const fl=tempFlag(last.temps[k]);
+      let cls="none",txt="no temps";
+      if(fl==="ok"){cls="ok";txt="even · dialed";}
+      else if(fl==="over"){cls="over";txt="center hot · try less psi";}
+      else if(fl==="under"){cls="under";txt="edges hot · try more psi";}
+      const tt=last.temps[k]||{o:"",m:"",i:""};
+      h+=`<div class="tire">
+        <div class="lab">${lab}</div>
+        <div class="tspread">${tt.o||"—"} / ${tt.m||"—"} / ${tt.i||"—"}</div>
+        <div class="asub">O / M / I °F</div>
+        <div class="flag ${cls}">${txt}</div>
+      </div>`;
+    });
+    h+=`</div></div>`;
+  }
+
+  // ---- notes timeline (cause → effect) ----
+  h+=`<div class="card">
+    <h2>📝 What Changed → What Happened</h2>`;
+  let anyNotes=false;
+  s.runs.forEach(run=>{
+    const fp=run.p.FL, rp=run.p.RL;
+    const psiTxt=`F${fmt(fp)} / R${fmt(rp)}`;
+    const note=(run.notes||"").trim();
+    if(note) anyNotes=true;
+    h+=`<div class="tline">
+      <div class="tdot"></div>
+      <div class="tbody">
+        <div class="thead"><b>${esc(run.label)}</b> <span class="muted">${esc(run.time||"")} · ${psiTxt}</span></div>
+        ${note?`<div class="tnote">${esc(note)}</div>`:`<div class="tnote muted">no notes</div>`}
+      </div>
+    </div>`;
+  });
+  if(!anyNotes){
+    h+=`<p class="muted" style="margin-top:4px">Add setup notes per run to build your cause→effect history here.</p>`;
+  }
+  h+=`</div>`;
+
+  return h;
+}
+
+function tireStepper(sid,rk,tk,lab,val,step,cold,setv){
+  let climb="";
+  if(val!=null){
+    let parts=[];
+    if(setv!=null){
+      const ds=Math.round((val-setv)*10)/10;
+      parts.push(`<span class="${ds>=0?'pos':'neg'}">${ds>=0?"+":""}${ds} vs set</span>`);
+    }
+    if(cold!=null){
+      const dc=Math.round((val-cold)*10)/10;
+      parts.push(`<span class="${dc>=0?'pos':'neg'}">${dc>=0?"+":""}${dc} vs cold</span>`);
+    }
+    if(parts.length) climb=`<div class="climb">${parts.join(" · ")}</div>`;
+  }
+  return `<div class="tire"><div class="lab">${lab}</div>
+    <div class="stepper">
+      <button onclick="step('${sid}','${rk}','${tk}',${-step})">−</button>
+      <div class="val">${fmt(val)}<small>psi</small></div>
+      <button onclick="step('${sid}','${rk}','${tk}',${step})">＋</button>
+    </div>${climb}</div>`;
+}
+
+// dedicated stepper for the pre-run SET pressure (writes to run.set[])
+function setStepper(sid,rid,tk,lab,val){
+  return `<div class="tire" style="background:var(--bg)"><div class="lab">${lab} SET</div>
+    <div class="stepper">
+      <button onclick="stepSet('${sid}','${rid}','${tk}',-0.5)">−</button>
+      <div class="val">${fmt(val)}<small>psi set</small></div>
+      <button onclick="stepSet('${sid}','${rid}','${tk}',0.5)">＋</button>
+    </div></div>`;
+}
+
+function tempCell(sid,rid,tk,lab,t){
+  t=t||{o:"",m:"",i:""};
+  const flag=tempFlag(t);
+  let fcls="none",ftxt="enter temps";
+  if(flag==="ok"){fcls="ok";ftxt="OK / even";}
+  else if(flag==="over"){fcls="over";ftxt="OVER · drop psi";}
+  else if(flag==="under"){fcls="under";ftxt="UNDER · add psi";}
+  const mk=(field,v)=>`<div class="tcell"><div class="tl">${field.toUpperCase()}</div>
+    <input class="tinp" inputmode="numeric" value="${v===""?"":v}" placeholder="—"
+      oninput="setTemp('${sid}','${rid}','${tk}','${field}',this.value)"></div>`;
+  return `<div class="tire"><div class="lab">${lab} TEMP °F</div>
+    <div class="temprow">${mk("o",t.o)}${mk("m",t.m)}${mk("i",t.i)}</div>
+    <div class="flag ${fcls}">${ftxt}</div></div>`;
+}
+
+function tempFlag(t){
+  const o=parseFloat(t.o),m=parseFloat(t.m),i=parseFloat(t.i);
+  if([o,m,i].some(isNaN))return null;
+  const mid=m-(o+i)/2;
+  if(mid>5)return "over";
+  if(mid<-5)return "under";
+  return "ok";
+}
+
+/* ---------- mutations ---------- */
+function setType(id,t){getS(id).type=t;save();render();}
+function upd(id,f,v){getS(id)[f]=v;save();}
+function updRun(sid,rid,f,v){const r=getS(sid).runs.find(x=>x.id===rid);r[f]=v;save();}
+function step(sid,rk,tk,d){
+  const s=getS(sid);
+  let obj=rk==="cold"?s.cold:s.runs.find(r=>r.id===rk).p;
+  let nv=Math.round(((obj[tk]||0)+d)*10)/10;
+  if(nv<0)nv=0; if(nv>60)nv=60;
+  obj[tk]=nv;save();render();
+}
+function toggleTemps(sid,rid){const r=getS(sid).runs.find(x=>x.id===rid);r.showTemps=!r.showTemps;save();render();}
+function toggleSet(sid,rid){
+  const s=getS(sid); const r=s.runs.find(x=>x.id===rid);
+  r.showSet=!r.showSet;
+  // when first opening, seed set[] from previous run's HOT (what you're bleeding from), else cold
+  if(r.showSet && !r.set){
+    const idx=s.runs.findIndex(x=>x.id===rid);
+    const base=idx>0 ? {...s.runs[idx-1].p} : {...s.cold};
+    r.set={...base};
+  }
+  save();render();
+}
+function stepSet(sid,rid,tk,d){
+  const s=getS(sid); const r=s.runs.find(x=>x.id===rid);
+  if(!r.set) r.set={...s.cold};
+  let nv=Math.round(((r.set[tk]||0)+d)*10)/10;
+  if(nv<0)nv=0; if(nv>60)nv=60;
+  r.set[tk]=nv; save(); render();
+}
+function setTemp(sid,rid,tk,field,v){
+  const r=getS(sid).runs.find(x=>x.id===rid);
+  if(!r.temps[tk])r.temps[tk]={o:"",m:"",i:""};
+  r.temps[tk][field]=v.replace(/[^0-9.]/g,"");save();
+}
+function delRun(sid,rid){
+  if(!confirm("Delete this run?"))return;
+  const s=getS(sid);s.runs=s.runs.filter(r=>r.id!==rid);save();render();
+}
+function delSession(sid){
+  const s=getS(sid);
+  const name=s.track||"(untitled)";
+  const rc=s.runs.length;
+  if(!confirm("Delete \""+name+"\" and all "+rc+" run"+(rc===1?"":"s")+"?\n\nThis can't be undone. Back up first if unsure."))return;
+  DB.sessions=DB.sessions.filter(x=>x.id!==sid);
+  save();
+  view={screen:"home"};render();
+}
+
+/* ---------- helpers ---------- */
+function fmt(v){return (v==null||v==="")?"—":(Number.isInteger(v)?v:v.toFixed(1));}
+function esc(s){return (s==null?"":String(s)).replace(/"/g,"&quot;").replace(/</g,"&lt;");}
+
+/* ---------- CSV export ---------- */
+function rowsFor(s){
+  const rows=[];
+  TIRES.forEach(([k,lab])=>{
+    rows.push([s.date,"",s.type,s.track,s.ambient,s.trackTemp,"COLD",lab,
+      s.cold[k],"","","","","","","","",""]);
+  });
+  s.runs.forEach(run=>{
+    TIRES.forEach(([k,lab])=>{
+      const cold=s.cold[k], hot=run.p[k];
+      const setv=(run.set&&typeof run.set[k]==="number")?run.set[k]:"";
+      const climb=(typeof cold==="number"&&typeof hot==="number")?Math.round((hot-cold)*10)/10:"";
+      const climbSet=(typeof setv==="number"&&typeof hot==="number")?Math.round((hot-setv)*10)/10:"";
+      const t=run.temps[k]||{o:"",m:"",i:""};
+      const flag=tempFlag(t);
+      const fl=flag==="over"?"OVER":flag==="under"?"UNDER":flag==="ok"?"OK":"";
+      rows.push([s.date,run.time||"",s.type,s.track,s.ambient,s.trackTemp,run.label,lab,
+        hot,setv,cold,climbSet,climb,t.o,t.m,t.i,fl,run.notes||""]);
+    });
+  });
+  return rows;
+}
+const HEAD=["Date","Time","Type","Track","Ambient_F","TrackTemp_F","Session","Tire",
+  "PSI","SetPSI","ColdPSI","ClimbVsSet","Climb","Temp_Outer","Temp_Mid","Temp_Inner","Flag","Notes"];
+function toCSV(rows){
+  const all=[HEAD,...rows];
+  return all.map(r=>r.map(c=>{
+    c=(c==null?"":String(c));
+    return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c;
+  }).join(",")).join("\n");
+}
+function download(name,text){
+  const blob=new Blob([text],{type:"text/csv"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");a.href=url;a.download=name;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+function exportOne(id){const s=getS(id);
+  download((s.track||"session").replace(/\s+/g,"_")+"_"+s.date+".csv",toCSV(rowsFor(s)));}
+function exportAll(){
+  let rows=[];DB.sessions.forEach(s=>{rows=rows.concat(rowsFor(s));});
+  download("tire_log_all_"+todayStr()+".csv",toCSV(rows));
+}
+
+/* ---------- BACKUP / RESTORE (JSON) ---------- */
+// Full-fidelity dump that survives a localStorage wipe.
+// Restore merges by session id: existing sessions are updated, new ones added.
+function backupAll(){
+  const blob={version:1,exported:new Date().toISOString(),db:DB};
+  const text=JSON.stringify(blob,null,2);
+  const b=new Blob([text],{type:"application/json"});
+  const url=URL.createObjectURL(b);
+  const a=document.createElement("a");a.href=url;
+  a.download="tire_log_backup_"+todayStr()+".json";
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  DB.lastBackup=Date.now(); save(); render();
+}
+function triggerRestore(){document.getElementById("restoreFile").click();}
+function handleRestore(ev){
+  const f=ev.target.files&&ev.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const data=JSON.parse(r.result);
+      const incoming=(data&&data.db&&Array.isArray(data.db.sessions))?data.db.sessions:null;
+      if(!incoming) throw new Error("not a tire_log backup file");
+      let added=0,updated=0;
+      incoming.forEach(ns=>{
+        const i=DB.sessions.findIndex(s=>s.id===ns.id);
+        if(i>=0){DB.sessions[i]=ns;updated++;}
+        else{DB.sessions.unshift(ns);added++;}
+      });
+      save();
+      alert("Restore complete\n+"+added+" new · "+updated+" updated");
+      render();
+    }catch(e){alert("Restore failed: "+e.message);}
+    ev.target.value="";
+  };
+  r.readAsText(f);
+}
+function needsBackupNudge(){
+  // nudge if there are runs and either never backed up, or last backup > 24h ago
+  const hasRuns=DB.sessions.some(s=>s.runs&&s.runs.length>0);
+  if(!hasRuns) return false;
+  if(!DB.lastBackup) return true;
+  return (Date.now()-DB.lastBackup) > 24*60*60*1000;
+}
+function backupAgeText(){
+  if(!DB.lastBackup) return "never backed up";
+  const mins=Math.floor((Date.now()-DB.lastBackup)/60000);
+  if(mins<1) return "backed up just now";
+  if(mins<60) return "backed up "+mins+"m ago";
+  const hrs=Math.floor(mins/60);
+  if(hrs<24) return "backed up "+hrs+"h ago";
+  const days=Math.floor(hrs/24);
+  return "backed up "+days+"d ago";
+}
+
+/* ---------- save safety nets ---------- */
+function flushSave(){try{localStorage.setItem(KEY,JSON.stringify(DB));}catch(e){}}
+// final save whenever the page is hidden, backgrounded, or closed
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")flushSave();});
+window.addEventListener("pagehide",flushSave);
+window.addEventListener("beforeunload",flushSave);
+window.addEventListener("blur",flushSave);
+// save when leaving any text field
+document.addEventListener("focusout",flushSave,true);
+// periodic autosave every 3s as a backstop
+setInterval(flushSave,3000);
+
+load();render();
+</script>
+</body>
+</html>
