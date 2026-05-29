@@ -86,7 +86,8 @@
   .wxrow{display:flex;gap:10px;align-items:flex-end;margin-top:10px}
   .wxfield{flex:1}
   .wxbtn{width:auto;flex:none;padding:13px 16px;font-size:15px;white-space:nowrap}
-  .gpsnote{font-size:11px;color:var(--dim);margin-top:5px;font-variant-numeric:tabular-nums;letter-spacing:.2px}
+  .gpsnote{font-size:12px;color:var(--ink);margin-top:5px;font-weight:600;letter-spacing:.2px;line-height:1.5}
+  .gpscoord{font-size:11px;color:var(--dim);font-weight:400;font-variant-numeric:tabular-nums}
   .gridlab{font-size:12px;font-weight:800;color:var(--dim);letter-spacing:.5px;margin-top:12px;margin-bottom:2px}
   .run-head{display:flex;align-items:center;gap:10px;margin-bottom:4px}
   .run-head .rt{font-weight:800;font-size:16px;flex:1}
@@ -157,7 +158,7 @@ function getS(id){return DB.sessions.find(s=>s.id===id);}
 
 function newSession(){
   const s={id:uid(),date:todayStr(),type:"track",track:"",ambient:"",trackTemp:"",
-    cold:{FL:27,FR:27,RL:27,RR:27},runs:[]};
+    cold:{FL:27,FR:27,RL:27,RR:27},coldTemp:"",laps:"",runs:[]};
   DB.sessions.unshift(s);save();view={screen:"session",sid:s.id};render();
 }
 function nowTime(){const d=new Date();return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");}
@@ -267,6 +268,8 @@ function renderSession(s){
     <div class="row" style="margin-top:10px">
       <div style="flex:1"><label class="fl">Date</label>
         <input class="txt" value="${esc(s.date)}" oninput="upd('${s.id}','date',this.value)"></div>
+      ${s.type==='track'?`<div style="flex:1"><label class="fl">Laps / session (optional)</label>
+        <input class="txt" inputmode="numeric" placeholder="e.g. 6" value="${esc(s.laps||"")}" oninput="upd('${s.id}','laps',this.value)"></div>`:""}
     </div>
     <div class="row" style="margin-top:10px">
       <div style="flex:1"><label class="fl">Ambient °F (optional)</label>
@@ -284,7 +287,14 @@ function renderSession(s){
   TIRES.forEach(([k,lab])=>{
     h+=tireStepper(s.id,"cold",k,lab,s.cold[k],0.5,null);
   });
-  h+=`</div></div>`;
+  h+=`</div>
+    <div style="margin-top:12px">
+      <label class="fl">❄ Cold Tire Temp °F (optional)</label>
+      <input class="txt" inputmode="numeric" placeholder="pyrometer reading before first run"
+        value="${esc(s.coldTemp||"")}" oninput="upd('${s.id}','coldTemp',this.value)">
+      <p class="muted" style="margin-top:6px">Thermal baseline — captures how warm the tires start. Builds data for predicting set pressures later.</p>
+    </div>
+  </div>`;
   // runs
   s.runs.forEach((run,idx)=>{
     h+=`<div class="card">
@@ -301,7 +311,7 @@ function renderSession(s){
           <input class="txt" style="margin-top:4px" inputmode="numeric" placeholder="— tap 📍 or type"
             value="${esc(run.ambient!=null?run.ambient:"")}"
             oninput="updRun('${s.id}','${run.id}','ambient',this.value)">
-          ${run.gps?`<div class="gpsnote">📍 ${run.gps.place?esc(run.gps.place)+" · ":""}${esc(run.gps.lat)}, ${esc(run.gps.lon)} @ ${esc(run.gps.at||"")}</div>`:""}
+          ${run.gps?`<div class="gpsnote">📍 ${run.gps.place?esc(run.gps.place):esc(run.gps.lat)+", "+esc(run.gps.lon)}${run.gps.cond?' · '+esc(run.gps.cond):''}<br><span class="gpscoord">${run.gps.place?esc(run.gps.lat)+", "+esc(run.gps.lon)+" @ "+esc(run.gps.at||""):"@ "+esc(run.gps.at||"")}</span></div>`:""}
         </div>
         <button class="btn accent2 wxbtn" onclick="grabWeather('${s.id}','${run.id}',this)">📍 Weather</button>
       </div>`;
@@ -594,6 +604,33 @@ function setTemp(sid,rid,tk,field,v){
   r.temps[tk][field]=v.replace(/[^0-9.]/g,"");save();
 }
 /* ---------- GPS WEATHER (Open-Meteo, no key) ---------- */
+// WMO weather code → plain label. Grouped to what matters for tire data.
+function wmoLabel(code){
+  if(code==null||isNaN(code)) return "";
+  const c=Number(code);
+  if(c===0) return "Clear";
+  if(c===1||c===2) return "Partly Cloudy";
+  if(c===3) return "Overcast";
+  if(c===45||c===48) return "Fog";
+  if(c>=51&&c<=57) return "Drizzle";
+  if(c>=61&&c<=67) return "Rain";
+  if(c>=71&&c<=77) return "Snow";
+  if(c>=80&&c<=82) return "Rain Showers";
+  if(c>=85&&c<=86) return "Snow Showers";
+  if(c>=95) return "Thunderstorm";
+  return "";
+}
+function condIcon(code){
+  const l=wmoLabel(code);
+  if(l==="Clear") return "☀";
+  if(l==="Partly Cloudy") return "⛅";
+  if(l==="Overcast") return "☁";
+  if(l==="Fog") return "🌫";
+  if(l.indexOf("Rain")>=0||l==="Drizzle") return "🌧";
+  if(l.indexOf("Snow")>=0) return "❄";
+  if(l==="Thunderstorm") return "⛈";
+  return "";
+}
 function grabWeather(sid,rid,btn){
   const orig=btn?btn.textContent:"";
   const setBtn=(txt)=>{if(btn)btn.textContent=txt;};
@@ -607,20 +644,22 @@ function grabWeather(sid,rid,btn){
       const lon=pos.coords.longitude.toFixed(4);
       setBtn("☁ fetching…");
       const url="https://api.open-meteo.com/v1/forecast?latitude="+lat+
-        "&longitude="+lon+"&current=temperature_2m&temperature_unit=fahrenheit";
+        "&longitude="+lon+"&current=temperature_2m,weather_code&temperature_unit=fahrenheit";
       fetch(url)
         .then(r=>{if(!r.ok)throw new Error("http "+r.status);return r.json();})
         .then(d=>{
           const t=d&&d.current&&typeof d.current.temperature_2m==="number"
             ? Math.round(d.current.temperature_2m) : null;
           if(t==null) throw new Error("no temp");
+          const cond=wmoLabel(d.current.weather_code);
           const r=getS(sid).runs.find(x=>x.id===rid);
           r.ambient=String(t);
           r.gps={lat:lat,lon:lon,at:nowTime()};
+          if(cond) r.gps.cond=cond;
           // stamp the time too if empty, so the reading is anchored
           if(!r.time) r.time=nowTime();
           save();
-          setBtn("✓ "+t+"°F");
+          setBtn("✓ "+t+"°F"+(cond?" "+condIcon(d.current.weather_code):""));
           // reverse-geocode for nearest city/state (independent; failure is harmless)
           const geoUrl="https://api.bigdatacloud.net/data/reverse-geocode-client?latitude="+
             lat+"&longitude="+lon+"&localityLanguage=en";
@@ -677,9 +716,10 @@ function esc(s){return (s==null?"":String(s)).replace(/"/g,"&quot;").replace(/</
 /* ---------- CSV export ---------- */
 function rowsFor(s){
   const rows=[];
+  const ct=s.coldTemp||"", lp=s.laps||"";
   TIRES.forEach(([k,lab])=>{
     rows.push([s.date,"",s.type,s.track,s.ambient,s.trackTemp,"COLD",lab,
-      s.cold[k],"","","","","","","","","","","",""]);
+      s.cold[k],"","","","","","","","","","","","",ct,lp,""]);
   });
   s.runs.forEach(run=>{
     TIRES.forEach(([k,lab])=>{
@@ -693,14 +733,15 @@ function rowsFor(s){
       const amb=(run.ambient!=null&&run.ambient!=="")?run.ambient:s.ambient;
       const lat=run.gps?run.gps.lat:"", lon=run.gps?run.gps.lon:"";
       const place=run.gps&&run.gps.place?run.gps.place:"";
+      const cond=run.gps&&run.gps.cond?run.gps.cond:"";
       rows.push([s.date,run.time||"",s.type,s.track,amb,s.trackTemp,run.label,lab,
-        hot,setv,cold,climbSet,climb,t.o,t.m,t.i,fl,run.notes||"",lat,lon,place]);
+        hot,setv,cold,climbSet,climb,t.o,t.m,t.i,fl,run.notes||"",lat,lon,place,ct,lp,cond]);
     });
   });
   return rows;
 }
 const HEAD=["Date","Time","Type","Track","Ambient_F","TrackTemp_F","Session","Tire",
-  "PSI","SetPSI","ColdPSI","ClimbVsSet","Climb","Temp_Outer","Temp_Mid","Temp_Inner","Flag","Notes","Lat","Lon","Location"];
+  "PSI","SetPSI","ColdPSI","ClimbVsSet","Climb","Temp_Outer","Temp_Mid","Temp_Inner","Flag","Notes","Lat","Lon","Location","ColdTemp_F","Laps","Condition"];
 function toCSV(rows){
   const all=[HEAD,...rows];
   return all.map(r=>r.map(c=>{
@@ -716,7 +757,11 @@ function download(name,text){
   setTimeout(()=>URL.revokeObjectURL(url),1500);
 }
 function exportOne(id){const s=getS(id);
-  download((s.track||"session").replace(/\s+/g,"_")+"_"+s.date+".csv",toCSV(rowsFor(s)));}
+  const nm=(s.track||"session").replace(/\s+/g,"_");
+  const ty=s.type==="autocross"?"autox":"track";
+  // time-of-day: first run's time if present, else now; strip colon
+  const tod=((s.runs[0]&&s.runs[0].time)?s.runs[0].time:nowTime()).replace(/[^0-9]/g,"");
+  download(nm+"_"+ty+"_"+s.date+"_"+tod+".csv",toCSV(rowsFor(s)));}
 function exportAll(){
   let rows=[];DB.sessions.forEach(s=>{rows=rows.concat(rowsFor(s));});
   download("tire_log_all_"+todayStr()+".csv",toCSV(rows));
