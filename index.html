@@ -452,19 +452,19 @@ function renderAnalysis(s){
     <h2>🌡 Pressure Climb by Corner</h2>
     <p class="muted" style="margin-bottom:8px">Cold → latest hot, and gap to your target line. Gap is info, not judgment.</p>
     <div class="grid2">`;
-  TIRES.forEach(([k,lab])=>{
-    const cold=s.cold[k];
+  tireOrder().forEach(([k,lab])=>{
+    const cold=numOrNull(s.cold[k]);
     const last=s.runs[s.runs.length-1];
-    const hot=last.p[k];
+    const hot=numOrNull(last.p[k]);
     const axle=(k==="FL"||k==="FR")?"front":"rear";
     const tgt=t[axle];
-    const climb=(typeof cold==="number"&&typeof hot==="number")?Math.round((hot-cold)*10)/10:null;
-    const gap=(typeof hot==="number")?Math.round((hot-tgt)*10)/10:null;
+    const climb=(cold!=null&&hot!=null)?Math.round((hot-cold)*10)/10:null;
+    const gap=(hot!=null)?Math.round((hot-tgt)*10)/10:null;
     // build sparkline-ish trend of hot across runs
-    const series=s.runs.map(r=>r.p[k]).filter(v=>typeof v==="number");
+    const series=s.runs.map(r=>numOrNull(r.p[k])).filter(v=>v!=null);
     // equilibrium: climb vs the set pressure on the latest run that has one
-    const lastSet=(last.set&&typeof last.set[k]==="number")?last.set[k]:null;
-    const vsSet=(lastSet!=null&&typeof hot==="number")?Math.round((hot-lastSet)*10)/10:null;
+    const lastSet=(last.set!=null)?numOrNull(last.set[k]):null;
+    const vsSet=(lastSet!=null&&hot!=null)?Math.round((hot-lastSet)*10)/10:null;
     let eqHtml="";
     if(vsSet!=null){
       let eqCls="under", eqTxt=(vsSet>=0?"+":"")+vsSet+" vs set";
@@ -785,7 +785,18 @@ function carriedTrackTemp(s,idx){
   }
   return null;
 }
-function fmt(v){return (v==null||v==="")?"—":(Number.isInteger(v)?v:v.toFixed(1));}
+function fmt(v){
+  if(v==null||v==="") return "—";
+  const n=(typeof v==="number")?v:parseFloat(v);
+  if(isNaN(n)) return "—";
+  return Number.isInteger(n)?n:n.toFixed(1);
+}
+// coerce a value (number or numeric string) to a number, or null if not numeric
+function numOrNull(v){
+  if(v==null||v==="") return null;
+  const n=(typeof v==="number")?v:parseFloat(v);
+  return isNaN(n)?null:n;
+}
 function esc(s){return (s==null?"":String(s)).replace(/"/g,"&quot;").replace(/</g,"&lt;");}
 
 /* ---------- CSV export ---------- */
