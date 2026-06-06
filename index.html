@@ -145,6 +145,17 @@
 
 <script>
 const TIRES=[["FL","Front L"],["FR","Front R"],["RL","Rear L"],["RR","Rear R"]];
+// display/entry order options. "grid" = current (FL,FR,RL,RR). "clockwise" = walk-around LF,RF,RR,LR.
+const TIRE_ORDERS={
+  grid:["FL","FR","RL","RR"],
+  clockwise:["FL","FR","RR","RL"]
+};
+function tireOrder(){
+  const key=(DB.settings&&DB.settings.tireOrder)||"grid";
+  const order=TIRE_ORDERS[key]||TIRE_ORDERS.grid;
+  // return [code,label] pairs in chosen order
+  return order.map(code=>TIRES.find(t=>t[0]===code));
+}
 const KEY="brz_tire_log_v1";
 let DB={sessions:[]};
 let view={screen:"home",sid:null};
@@ -157,7 +168,7 @@ function todayStr(){const d=new Date();return d.getFullYear()+"-"+String(d.getMo
 function getS(id){return DB.sessions.find(s=>s.id===id);}
 
 function newSession(){
-  const s={id:uid(),date:todayStr(),type:"track",track:"",ambient:"",trackTemp:"",
+  const s={id:uid(),date:todayStr(),type:"track",track:"",
     cold:{FL:27,FR:27,RL:27,RR:27},coldTemp:{FL:"",FR:"",RL:"",RR:""},laps:"",runs:[]};
   DB.sessions.unshift(s);save();view={screen:"session",sid:s.id};render();
 }
@@ -240,6 +251,13 @@ function renderHome(){
     <b>Read hot</b> within 1–2 min of coming in.<br>
     <b>Temps O/M/I:</b> center hotter = over (drop psi) · edges hotter = under (add psi) · even = dialed.
     </p></div>`;
+  h+=`<div class="card"><h2>⚙ Tire Entry Order</h2>
+    <p class="muted" style="margin-bottom:8px">Order the tire boxes appear for entry. Clockwise matches a walk-around (LF→RF→RR→LR).</p>
+    <div class="seg">
+      <button class="${((DB.settings&&DB.settings.tireOrder)||'grid')==='grid'?'on':''}" onclick="setTireOrderPref('grid')">Grid order</button>
+      <button class="${(DB.settings&&DB.settings.tireOrder)==='clockwise'?'on':''}" onclick="setTireOrderPref('clockwise')">Clockwise</button>
+    </div>
+  </div>`;
   h+=`<div class="card"><h2>💾 Backup</h2>
     <p class="muted" style="margin-bottom:10px">A full JSON backup that survives a browser clear or phone wipe. Restore merges into your current data.</p>
     <div class="row">
@@ -271,20 +289,13 @@ function renderSession(s){
       ${s.type==='track'?`<div style="flex:1"><label class="fl">Laps / session (optional)</label>
         <input class="txt" inputmode="numeric" placeholder="e.g. 6" value="${esc(s.laps||"")}" oninput="upd('${s.id}','laps',this.value)"></div>`:""}
     </div>
-    <div class="row" style="margin-top:10px">
-      <div style="flex:1"><label class="fl">Ambient °F (optional)</label>
-        <input class="txt" inputmode="numeric" placeholder="fill later" value="${esc(s.ambient)}" oninput="upd('${s.id}','ambient',this.value)"></div>
-      <div style="flex:1"><label class="fl">Track °F (optional)</label>
-        <input class="txt" inputmode="numeric" placeholder="fill later" value="${esc(s.trackTemp)}" oninput="upd('${s.id}','trackTemp',this.value)"></div>
-    </div>
-    <p class="muted" style="margin-top:8px">Leave temps blank — each run logs a timestamp so you can pull accurate ambient/track temps from a weather source afterward and enter them in Excel.</p>
   </div>`;
   // cold baseline
   h+=`<div class="card">
     <h2>❄ Cold Baseline (PSI)</h2>
     <p class="muted" style="margin-bottom:4px">Set before your first run. Used to calc climb.</p>
     <div class="grid2">`;
-  TIRES.forEach(([k,lab])=>{
+  tireOrder().forEach(([k,lab])=>{
     h+=tireStepper(s.id,"cold",k,lab,s.cold[k],0.5,null);
   });
   h+=`</div>
@@ -292,7 +303,7 @@ function renderSession(s){
       <label class="fl">❄ Cold Tire Temp °F (optional)</label>
       <p class="muted" style="margin:4px 0 8px">Per corner — sun on one side warms those tires more. Builds data for predicting set pressures later.</p>
       <div class="grid2">`;
-  TIRES.forEach(([k,lab])=>{
+  tireOrder().forEach(([k,lab])=>{
     const cv=(s.coldTemp&&s.coldTemp[k]!=null)?s.coldTemp[k]:"";
     h+=`<div class="tire"><div class="lab">${lab} COLD °F</div>
       <input class="tinp" inputmode="numeric" placeholder="—" value="${esc(cv)}"
@@ -320,13 +331,24 @@ function renderSession(s){
           ${run.gps?`<div class="gpsnote">📍 ${run.gps.place?esc(run.gps.place):esc(run.gps.lat)+", "+esc(run.gps.lon)}${run.gps.cond?' · '+esc(run.gps.cond):''}<br><span class="gpscoord">${run.gps.place?esc(run.gps.lat)+", "+esc(run.gps.lon)+" @ "+esc(run.gps.at||""):"@ "+esc(run.gps.at||"")}</span></div>`:""}
         </div>
         <button class="btn accent2 wxbtn" onclick="grabWeather('${s.id}','${run.id}',this)">📍 Weather</button>
-      </div>`;
+      </div>
+      ${(function(){
+        const carried=carriedTrackTemp(s,idx);
+        const own=(run.trackTemp!=null&&run.trackTemp!=="")?run.trackTemp:"";
+        const ph=own?"":(carried!=null?"carried "+carried+"° — type if changed":"track surface °F (optional)");
+        return `<div style="margin-top:10px">
+          <label class="fl">🌡 Track Surface °F (this run)</label>
+          <input class="txt" style="margin-top:4px" inputmode="numeric" placeholder="${ph}"
+            value="${esc(own)}" oninput="updRun('${s.id}','${run.id}','trackTemp',this.value)">
+          ${(!own&&carried!=null)?`<p class="muted" style="margin-top:5px">Using ${carried}° from a recent run. Enter a value only if it changed.</p>`:""}
+        </div>`;
+      })()}`;
     // set (pre-run) pressure toggle — sits ABOVE hot pressures (you set, then run)
     h+=`<div class="toggle-temps" onclick="toggleSet('${s.id}','${run.id}')">
       ${run.showSet?"▴ hide pre-run set pressure":"▾ set pre-run pressure (warm)"}</div>`;
     if(run.showSet){
       h+=`<p class="muted" style="margin:-2px 0 6px;text-align:center">Where you set them before this run. Climb shows vs set when present.</p><div class="grid2">`;
-      TIRES.forEach(([k,lab])=>{
+      tireOrder().forEach(([k,lab])=>{
         const setv=(run.set&&typeof run.set[k]==="number")?run.set[k]:(run.set?run.set[k]:s.cold[k]);
         h+=setStepper(s.id,run.id,k,lab,setv);
       });
@@ -334,7 +356,7 @@ function renderSession(s){
     }
     h+=`<div class="gridlab">🔥 HOT — after run</div>
       <div class="grid2">`;
-    TIRES.forEach(([k,lab])=>{
+    tireOrder().forEach(([k,lab])=>{
       const setv=(run.set&&typeof run.set[k]==="number")?run.set[k]:null;
       h+=tireStepper(s.id,run.id,k,lab,run.p[k],0.5,s.cold[k],setv);
     });
@@ -344,7 +366,7 @@ function renderSession(s){
       ${run.showTemps?"▴ hide tire temps":"▾ add tire temps (pyrometer)"}</div>`;
     if(run.showTemps){
       h+=`<div class="grid2">`;
-      TIRES.forEach(([k,lab])=>{
+      tireOrder().forEach(([k,lab])=>{
         h+=tempCell(s.id,run.id,k,lab,run.temps[k]);
       });
       h+=`</div>`;
@@ -558,11 +580,20 @@ function tempCell(sid,rid,tk,lab,t){
   else if(flag==="over"){fcls="over";ftxt="OVER · drop psi";}
   else if(flag==="under"){fcls="under";ftxt="UNDER · add psi";}
   const mk=(field,v)=>`<div class="tcell"><div class="tl">${field.toUpperCase()}</div>
-    <input class="tinp" inputmode="numeric" value="${v===""?"":v}" placeholder="—"
-      oninput="setTemp('${sid}','${rid}','${tk}','${field}',this.value)"></div>`;
+    <input class="tinp tinp-seq" id="tmp_${rid}_${tk}_${field}" inputmode="numeric" value="${v===""?"":v}" placeholder="—"
+      oninput="setTemp('${sid}','${rid}','${tk}','${field}',this.value);advTemp(this)"></div>`;
   return `<div class="tire"><div class="lab">${lab} TEMP °F</div>
     <div class="temprow">${mk("o",t.o)}${mk("m",t.m)}${mk("i",t.i)}</div>
     <div class="flag ${fcls}">${ftxt}</div></div>`;
+}
+// auto-advance: when an input reaches 3 digits, jump focus to the next temp field in DOM order
+function advTemp(el){
+  const v=(el.value||"").replace(/[^0-9.]/g,"");
+  if(v.length>=3){
+    const all=Array.from(document.querySelectorAll(".tinp-seq"));
+    const i=all.indexOf(el);
+    if(i>=0 && i<all.length-1){ all[i+1].focus(); all[i+1].select&&all[i+1].select(); }
+  }
 }
 
 function tempFlag(t){
@@ -577,6 +608,10 @@ function tempFlag(t){
 /* ---------- mutations ---------- */
 function setType(id,t){getS(id).type=t;save();render();}
 function upd(id,f,v){getS(id)[f]=v;save();}
+function setTireOrderPref(v){
+  if(!DB.settings) DB.settings={};
+  DB.settings.tireOrder=v; save(); render();
+}
 function setColdTemp(sid,tk,v){
   const s=getS(sid);
   // migrate old string-format coldTemp to per-tire object if needed
@@ -723,6 +758,33 @@ function delSession(sid){
 }
 
 /* ---------- helpers ---------- */
+// parse "HH:MM" to minutes since midnight; null if unparseable
+function timeToMin(t){
+  if(!t) return null;
+  const m=String(t).match(/(\d{1,2}):(\d{2})/);
+  if(!m) return null;
+  return parseInt(m[1],10)*60+parseInt(m[2],10);
+}
+// carry-forward track temp: most recent PRIOR run with a track temp, if within 30 min.
+// returns the carried number, or null if none qualifies.
+function carriedTrackTemp(s,idx){
+  const cur=s.runs[idx];
+  const curMin=timeToMin(cur&&cur.time);
+  for(let j=idx-1;j>=0;j--){
+    const pr=s.runs[j];
+    if(pr.trackTemp!=null&&pr.trackTemp!==""){
+      // found the most recent prior entered value; check time gap
+      const prMin=timeToMin(pr.time);
+      if(curMin!=null&&prMin!=null){
+        if(Math.abs(curMin-prMin)<=30) return pr.trackTemp;
+        return null; // too long ago — track likely changed, don't carry
+      }
+      // if either time missing, fall back to carrying (best effort)
+      return pr.trackTemp;
+    }
+  }
+  return null;
+}
 function fmt(v){return (v==null||v==="")?"—":(Number.isInteger(v)?v:v.toFixed(1));}
 function esc(s){return (s==null?"":String(s)).replace(/"/g,"&quot;").replace(/</g,"&lt;");}
 
@@ -737,23 +799,30 @@ function rowsFor(s){
     return s.coldTemp; // legacy single value applies to all tires
   };
   TIRES.forEach(([k,lab])=>{
-    rows.push([s.date,"",s.type,s.track,s.ambient,s.trackTemp,"COLD",lab,
+    rows.push([s.date,"",s.type,s.track,"",(s.trackTemp||""),"COLD",lab,
       s.cold[k],"","","","","","","","","","","","",ctFor(k),lp,""]);
   });
-  s.runs.forEach(run=>{
+  s.runs.forEach((run,idx)=>{
+    // resolve track temp: own value, else carried (within 30 min), else blank
+    const ownTT=(run.trackTemp!=null&&run.trackTemp!=="")?run.trackTemp:"";
+    const resolvedTT=ownTT!==""?ownTT:(carriedTrackTemp(s,idx)!=null?carriedTrackTemp(s,idx):"");
     TIRES.forEach(([k,lab])=>{
       const cold=s.cold[k], hot=run.p[k];
-      const setv=(run.set&&typeof run.set[k]==="number")?run.set[k]:"";
+      // set pressure: explicit value if bled; else auto-fill the CARRIED hot (prev run's hot for this tire)
+      let setv;
+      if(run.set&&typeof run.set[k]==="number"){ setv=run.set[k]; }
+      else if(idx>0 && typeof s.runs[idx-1].p[k]==="number"){ setv=s.runs[idx-1].p[k]; } // carried, unbled
+      else { setv=(typeof cold==="number")?cold:""; } // first run: carried from cold baseline
       const climb=(typeof cold==="number"&&typeof hot==="number")?Math.round((hot-cold)*10)/10:"";
       const climbSet=(typeof setv==="number"&&typeof hot==="number")?Math.round((hot-setv)*10)/10:"";
       const t=run.temps[k]||{o:"",m:"",i:""};
       const flag=tempFlag(t);
       const fl=flag==="over"?"OVER":flag==="under"?"UNDER":flag==="ok"?"OK":"";
-      const amb=(run.ambient!=null&&run.ambient!=="")?run.ambient:s.ambient;
+      const amb=(run.ambient!=null&&run.ambient!=="")?run.ambient:"";
       const lat=run.gps?run.gps.lat:"", lon=run.gps?run.gps.lon:"";
       const place=run.gps&&run.gps.place?run.gps.place:"";
       const cond=run.gps&&run.gps.cond?run.gps.cond:"";
-      rows.push([s.date,run.time||"",s.type,s.track,amb,s.trackTemp,run.label,lab,
+      rows.push([s.date,run.time||"",s.type,s.track,amb,resolvedTT,run.label,lab,
         hot,setv,cold,climbSet,climb,t.o,t.m,t.i,fl,run.notes||"",lat,lon,place,ctFor(k),lp,cond]);
     });
   });
