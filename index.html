@@ -145,7 +145,7 @@
 
 <script>
 const TIRES=[["FL","Front L"],["FR","Front R"],["RL","Rear L"],["RR","Rear R"]];
-const BUILD="2026.06.07";  // bump this each ship so the footer confirms the loaded version
+const BUILD="2026.06.07b";  // bump this each ship so the footer confirms the loaded version
 // display/entry order options. "grid" = current (FL,FR,RL,RR). "clockwise" = walk-around LF,RF,RR,LR.
 const TIRE_ORDERS={
   grid:["FL","FR","RL","RR"],
@@ -606,6 +606,7 @@ function advTemp(el){
 }
 
 function tempFlag(t){
+  if(!t||typeof t!=="object")return null;
   const o=parseFloat(t.o),m=parseFloat(t.m),i=parseFloat(t.i);
   if([o,m,i].some(isNaN))return null;
   const mid=m-(o+i)/2;
