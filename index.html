@@ -145,6 +145,7 @@
 
 <script>
 const TIRES=[["FL","Front L"],["FR","Front R"],["RL","Rear L"],["RR","Rear R"]];
+const BUILD="2026.06.07";  // bump this each ship so the footer confirms the loaded version
 // display/entry order options. "grid" = current (FL,FR,RL,RR). "clockwise" = walk-around LF,RF,RR,LR.
 const TIRE_ORDERS={
   grid:["FL","FR","RL","RR"],
@@ -205,7 +206,13 @@ function render(){
     document.getElementById("title").textContent="Analysis";
     back.classList.remove("hide");
     back.onclick=()=>{view={screen:"session",sid:s.id};render();};
-    app.innerHTML=renderAnalysis(s);
+    try{
+      app.innerHTML=renderAnalysis(s);
+    }catch(err){
+      app.innerHTML=`<div class="card"><h2>Analysis hit a snag</h2>
+        <p class="muted">Something in this session's data couldn't be read. Your data is safe — this is just the analysis view. Try backing up and re-importing, or tap back to keep logging.</p>
+        <p class="muted" style="margin-top:8px;font-size:11px">build ${BUILD} · ${esc(String(err.message||err))}</p></div>`;
+    }
     fab.innerHTML=`<button class="btn primary" onclick="view={screen:'session',sid:'${s.id}'};render()">‹ Back to logging</button>`;
   }
   const screenKey=view.screen+":"+(view.sid||"");
@@ -267,6 +274,8 @@ function renderHome(){
     <div class="muted" style="text-align:center;margin-top:8px;font-size:12px">${backupAgeText()}</div>
     <input type="file" id="restoreFile" accept=".json,application/json" style="display:none" onchange="handleRestore(event)">
   </div>`;
+  h+=`<div style="text-align:center;color:var(--dim);font-size:11px;margin:18px 0 4px;letter-spacing:.5px">
+    BRZ Tire Logger · build ${BUILD}</div>`;
   return h;
 }
 
