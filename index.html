@@ -145,7 +145,7 @@
 
 <script>
 const TIRES=[["FL","Front L"],["FR","Front R"],["RL","Rear L"],["RR","Rear R"]];
-const BUILD="2026.06.07b";  // bump this each ship so the footer confirms the loaded version
+const BUILD="2026.06.07c";  // bump this each ship so the footer confirms the loaded version
 // display/entry order options. "grid" = current (FL,FR,RL,RR). "clockwise" = walk-around LF,RF,RR,LR.
 const TIRE_ORDERS={
   grid:["FL","FR","RL","RR"],
@@ -189,6 +189,7 @@ function render(){
   if(view.screen==="home"){
     document.getElementById("title").textContent="Tire Log";
     back.classList.add("hide");
+    DB.sessions.forEach(s=>{s._showOpts=false;});  // always re-enter sessions with options collapsed
     app.innerHTML=renderHome();
     fab.innerHTML=`<button class="btn primary" onclick="newSession()">＋ New Session</button>`;
   }else if(view.screen==="session"){
@@ -391,7 +392,14 @@ function renderSession(s){
   if(!s.runs.length){
     h+=`<p class="small-note">No runs yet — tap “Add Run” after your first session.</p>`;
   }
-  h+=`<button class="btn ghost danger" onclick="delSession('${s.id}')">🗑 Delete this session</button>`;
+  h+=`<div class="toggle-temps" style="margin-top:18px" onclick="toggleOpts('${s.id}')">
+    ${s._showOpts?"▴ hide session options":"▾ session options"}</div>`;
+  if(s._showOpts){
+    h+=`<div style="margin-top:10px">
+      <p class="muted" style="margin-bottom:8px;text-align:center">Careful — deleting removes this session and all its runs. Back up first if unsure.</p>
+      <button class="btn ghost danger" onclick="delSession('${s.id}')">🗑 Delete this session</button>
+    </div>`;
+  }
   return h;
 }
 
@@ -638,6 +646,7 @@ function step(sid,rk,tk,d){
   obj[tk]=nv;save();render();
 }
 function toggleTemps(sid,rid){const r=getS(sid).runs.find(x=>x.id===rid);r.showTemps=!r.showTemps;save();render();}
+function toggleOpts(sid){const s=getS(sid);s._showOpts=!s._showOpts;render();}
 function toggleSet(sid,rid){
   const s=getS(sid); const r=s.runs.find(x=>x.id===rid);
   r.showSet=!r.showSet;
