@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0a0e14">
-<title>Tire Log — BRZ RT660+</title>
+<title>Tire Log</title>
 <style>
   :root{
     --bg:#0a0e14; --panel:#141a24; --panel2:#1c2533; --line:#2a3547;
@@ -22,9 +22,9 @@
   .top{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,#0a0e14,#0a0e14ee);
     backdrop-filter:blur(6px);padding:14px 16px 10px;border-bottom:2px solid var(--line);
     display:flex;align-items:center;gap:10px}
-  .top h1{font-size:18px;font-weight:800;letter-spacing:.3px;flex:1}
+  .top h1{font-size:18px;font-weight:800;letter-spacing:.3px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .top .badge{font-size:11px;font-weight:700;color:var(--bg);background:var(--accent);
-    padding:3px 8px;border-radius:6px;letter-spacing:.5px}
+    padding:3px 8px;border-radius:6px;letter-spacing:.5px;max-width:45%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .wrap{padding:16px}
   .muted{color:var(--dim);font-size:13px}
   .btn{display:flex;align-items:center;justify-content:center;gap:8px;
@@ -48,7 +48,7 @@
   .sess-item .typchip{font-size:10px;font-weight:800;padding:4px 8px;border-radius:7px;letter-spacing:.6px}
   .typ-track{background:var(--accent2);color:#04121f}
   .typ-autox{background:var(--under);color:#1a1206}
-  .sess-item .meta{flex:1}
+  .sess-item .meta{flex:1;min-width:0}
   .sess-item .meta .t{font-weight:700;font-size:16px}
   .sess-item .arrow{color:var(--dim);font-size:22px}
   /* tire grid */
@@ -100,14 +100,12 @@
     font-size:15px;padding:12px;border-radius:10px;cursor:pointer}
   .seg button.on{background:var(--accent);color:#fff}
   .seg button.on.ax{background:var(--under);color:#1a1206}
+  .seg.s3 button{padding:9px;font-size:14px}
   .fab{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;width:calc(100% - 32px);
     max-width:488px;z-index:40}
   .back{font-size:24px;color:var(--dim);cursor:pointer;padding:0 4px 0 0;line-height:1}
   .small-note{font-size:11px;color:var(--dim);text-align:center;margin-top:6px}
   .hide{display:none!important}
-  .ref{font-size:13px;color:var(--dim);line-height:1.5}
-  .ref b{color:var(--ink)}
-  . amb{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   /* analysis */
   .tgtrow{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:6px}
   .tgtbox{background:var(--panel2);border:1px solid var(--line);border-radius:15px;padding:10px 8px}
@@ -132,21 +130,39 @@
   .nudgeT{font-weight:800;font-size:15px;color:var(--ink)}
   .nudgeS{font-size:13px;color:var(--dim);margin-top:2px}
   .nudgeArr{color:var(--under);font-size:22px;font-weight:700}
+  /* reference sheet */
+  .sechead{font-weight:800;font-size:14px;letter-spacing:.8px;margin:6px 0 10px;display:flex;align-items:center;gap:8px}
+  .sechead .typchip{font-size:11px;font-weight:800;padding:4px 9px;border-radius:7px;letter-spacing:.6px}
+  .refhead{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+  .refsite{font-weight:800;font-size:18px;flex:1}
+  .refedit{color:var(--accent2);font-size:13px;font-weight:700;padding:4px 6px;cursor:pointer}
+  .refgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .refcell{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:8px 4px;text-align:center}
+  .rl{font-size:10px;font-weight:800;color:var(--dim);letter-spacing:.6px}
+  .rv{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:3px}
+  .rsub{font-size:11px;color:var(--dim);text-align:center;margin-top:6px}
+  .rnote{font-size:13px;color:var(--dim);margin-top:8px;line-height:1.4}
+  .refhint{background:rgba(35,166,255,.1);border:1px solid var(--accent2);border-radius:14px;padding:12px;margin-bottom:14px}
+  .refhint .rh{font-size:13px;font-weight:800;color:var(--accent2);letter-spacing:.4px}
+  .refhint .rb{font-size:15px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+  .linkbtn{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--accent2);
+    border-radius:16px;padding:15px;margin:16px 0 14px;cursor:pointer}
+  .linkbtn:active{background:var(--panel2)}
 </style>
 </head>
 <body>
 <div class="top">
   <span id="backBtn" class="back hide">‹</span>
   <h1 id="title">Tire Log</h1>
-  <span class="badge">RT660+</span>
+  <span class="badge" id="badge"></span>
 </div>
 <div id="app" class="wrap"></div>
 <div id="fab" class="fab"></div>
 
 <script>
 const TIRES=[["FL","Front L"],["FR","Front R"],["RL","Rear L"],["RR","Rear R"]];
-const BUILD="2026.06.07c";  // bump this each ship so the footer confirms the loaded version
-// display/entry order options. "grid" = current (FL,FR,RL,RR). "clockwise" = walk-around LF,RF,RR,LR.
+const BUILD="2026.10.09a";  // bump this each ship so the footer confirms the loaded version
+// display/entry order options. "grid" = (FL,FR,RL,RR). "clockwise" = walk-around LF,RF,RR,LR.
 const TIRE_ORDERS={
   grid:["FL","FR","RL","RR"],
   clockwise:["FL","FR","RR","RL"]
@@ -154,30 +170,216 @@ const TIRE_ORDERS={
 function tireOrder(){
   const key=(DB.settings&&DB.settings.tireOrder)||"grid";
   const order=TIRE_ORDERS[key]||TIRE_ORDERS.grid;
-  // return [code,label] pairs in chosen order
   return order.map(code=>TIRES.find(t=>t[0]===code));
 }
-const KEY="brz_tire_log_v1";
-let DB={sessions:[]};
+const KEY="brz_tire_log_v1";  // unchanged on purpose — existing data keeps loading
+let DB={sessions:[],profiles:[],refs:[],settings:{}};
 let view={screen:"home",sid:null};
 let lastScreenKey="";
 
-function load(){try{const r=localStorage.getItem(KEY);if(r)DB=JSON.parse(r);}catch(e){}}
+function load(){try{const r=localStorage.getItem(KEY);if(r)DB=JSON.parse(r);}catch(e){}migrate();flushSave();}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(DB));}catch(e){alert("Storage error — export your data to be safe.");}}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function todayStr(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function getS(id){return DB.sessions.find(s=>s.id===id);}
 
+/* ---------- CAR / TIRE PROFILES ---------- */
+function getP(id){return (DB.profiles||[]).find(p=>p.id===id);}
+function activeP(){return getP(DB.settings.activeProfile)||DB.profiles[0];}
+function sessP(s){return getP(s&&s.profileId)||activeP();}
+function pLabel(p){return p?(p.car+" · "+p.tire):"";}
+
+function migrate(){
+  if(!DB||typeof DB!=="object")DB={};
+  if(!Array.isArray(DB.sessions))DB.sessions=[];
+  if(!DB.settings||typeof DB.settings!=="object")DB.settings={};
+  if(!Array.isArray(DB.profiles))DB.profiles=[];
+  if(!Array.isArray(DB.refs))DB.refs=[];
+  if(!DB.profiles.length){
+    DB.profiles.push(
+      {id:"p_brz_re71rz",car:"Subaru BRZ",tire:"Bridgestone RE-71RZ",shockUnit:"turns off bottom"},
+      {id:"p_brz_rt660",car:"Subaru BRZ",tire:"Falken RT660+",shockUnit:"turns off bottom"}
+    );
+    DB.settings.activeProfile="p_brz_re71rz";
+  }
+  // everything logged before profiles existed was RT660+
+  const legacy=getP("p_brz_rt660")||DB.profiles[0];
+  DB.sessions.forEach(s=>{if(!s.profileId)s.profileId=legacy.id;});
+  if(!getP(DB.settings.activeProfile))DB.settings.activeProfile=DB.profiles[0].id;
+  if(!DB.settings.seededRefs){
+    if(getP("p_brz_re71rz")){
+      const src="Shocks carried from RT660+ — re-verify on RZ";
+      [["autocross","Bristol","1.25","1.5",src],
+       ["autocross","Franklin","1.25","","Rear not logged. "+src],
+       ["autocross","zMAX","0.5–1.0","1.75","Odd surface. "+src],
+       ["track","NCCAR","0.75","1.5",src],
+       ["track","CMP","1.25","1.5",src],
+       ["track","Charlotte Roval","1.25","1.5","Baseline, no change logged. "+src]
+      ].forEach(([type,site,sf,sr,note])=>{
+        DB.refs.push({id:uid(),profileId:"p_brz_re71rz",type,site,
+          coldF:"",coldR:"",hotF:"",hotR:"",shockF:sf,shockR:sr,note});
+      });
+    }
+    DB.settings.seededRefs=true;
+  }
+}
+function setActiveProfile(id){DB.settings.activeProfile=id;save();render();}
+function addProfile(){
+  const a=activeP()||{};
+  const car=prompt("Car?",a.car||""); if(!car)return;
+  const tire=prompt("Tire?",""); if(!tire)return;
+  const unit=prompt("Shock adjustment unit? (blank if none)",a.shockUnit||"turns off bottom");
+  const p={id:"p_"+uid(),car:car.trim(),tire:tire.trim(),shockUnit:(unit||"").trim()};
+  DB.profiles.push(p);DB.settings.activeProfile=p.id;save();render();
+}
+function editProfile(){
+  const p=activeP(); if(!p)return;
+  const car=prompt("Car?",p.car); if(car==null)return;
+  const tire=prompt("Tire?",p.tire); if(tire==null)return;
+  const unit=prompt("Shock adjustment unit? (blank if none)",p.shockUnit||"");
+  if(car.trim())p.car=car.trim(); if(tire.trim())p.tire=tire.trim();
+  if(unit!=null)p.shockUnit=unit.trim();
+  save();render();
+}
+function profileSelect(onchg,sel){
+  return `<select class="txt" onchange="${onchg}">${DB.profiles.map(p=>
+    `<option value="${p.id}" ${p.id===sel?"selected":""}>${esc(pLabel(p))}</option>`).join("")}</select>`;
+}
+
+/* ---------- REFERENCE SHEET ---------- */
+function siteMatch(a,b){
+  a=String(a||"").trim().toLowerCase(); b=String(b||"").trim().toLowerCase();
+  if(!a||!b)return false;
+  return a===b||a.includes(b)||b.includes(a);
+}
+function findRef(s){
+  if(!s||!s.track)return null;
+  return DB.refs.find(r=>r.profileId===s.profileId&&r.type===s.type&&siteMatch(r.site,s.track))||null;
+}
+// strict number: "0.5–1.0" → null (ranges stay text, never auto-applied)
+function strictNum(v){if(v==null||v==="")return null;const n=Number(v);return isNaN(n)?null:n;}
+function dash(v){return (v==null||v==="")?"—":esc(v);}
+function updRef(id,f,v){const r=DB.refs.find(x=>x.id===id);if(r){r[f]=v;save();}}
+function addRef(type){
+  const r={id:uid(),profileId:activeP().id,type,site:"",coldF:"",coldR:"",hotF:"",hotR:"",shockF:"",shockR:"",note:""};
+  DB.refs.push(r);view.editRef=r.id;save();render();
+}
+function doneRef(id){
+  const r=DB.refs.find(x=>x.id===id);
+  if(r&&!String(r.site||"").trim()&&!r.coldF&&!r.hotF&&!r.shockF){DB.refs=DB.refs.filter(x=>x.id!==id);}
+  view.editRef=null;save();render();
+}
+function delRef(id){
+  const r=DB.refs.find(x=>x.id===id);
+  if(!confirm("Delete reference for \""+((r&&r.site)||"(untitled)")+"\"?"))return;
+  DB.refs=DB.refs.filter(x=>x.id!==id);view.editRef=null;save();render();
+}
+function renderRef(){
+  const p=activeP();
+  let h=`<div class="card"><h2>Car / Tire</h2>${profileSelect("setActiveProfile(this.value)",p.id)}
+    <p class="muted" style="margin-top:8px">F / R pairs.${p.shockUnit?" Shocks in "+esc(p.shockUnit)+".":""}</p></div>`;
+  [["autocross","AUTOCROSS","typ-autox"],["track","TRACK","typ-track"]].forEach(([type,lab,chip])=>{
+    const list=DB.refs.filter(r=>r.profileId===p.id&&r.type===type)
+      .sort((a,b)=>String(a.site).localeCompare(String(b.site)));
+    h+=`<div class="sechead"><span class="typchip ${chip}">${lab}</span></div>`;
+    if(!list.length)h+=`<p class="small-note" style="margin:-4px 0 14px">No ${type} sites yet.</p>`;
+    list.forEach(r=>{h+=(view.editRef===r.id)?refEdit(r):refCard(r);});
+  });
+  return h;
+}
+function refCard(r){
+  const pair=(a,b)=>`${dash(a)} / ${dash(b)}`;
+  return `<div class="card">
+    <div class="refhead"><div class="refsite">${esc(r.site)||"(untitled)"}</div>
+      <span class="refedit" onclick="view.editRef='${r.id}';render()">edit</span></div>
+    <div class="refgrid">
+      <div class="refcell"><div class="rl">COLD PSI</div><div class="rv">${pair(r.coldF,r.coldR)}</div></div>
+      <div class="refcell"><div class="rl">HOT TARGET</div><div class="rv">${pair(r.hotF,r.hotR)}</div></div>
+      <div class="refcell"><div class="rl">SHOCKS</div><div class="rv">${pair(r.shockF,r.shockR)}</div></div>
+    </div>
+    ${r.note?`<div class="rnote">${esc(r.note)}</div>`:""}
+  </div>`;
+}
+function refEdit(r){
+  const f=(lab,field,mode)=>`<div style="flex:1"><label class="fl">${lab}</label>
+    <input class="txt" inputmode="${mode||"decimal"}" placeholder="—" value="${esc(r[field]||"")}"
+      oninput="updRef('${r.id}','${field}',this.value)"></div>`;
+  return `<div class="card">
+    <label class="fl">Site</label>
+    <input class="txt" placeholder="e.g. CMP" value="${esc(r.site||"")}" oninput="updRef('${r.id}','site',this.value)">
+    <div class="seg" style="margin-top:10px">
+      <button class="${r.type==='autocross'?'on ax':''}" onclick="updRef('${r.id}','type','autocross');render()">Autocross</button>
+      <button class="${r.type==='track'?'on':''}" onclick="updRef('${r.id}','type','track');render()">Track</button>
+    </div>
+    <div class="row" style="margin-top:10px">${f("Cold F","coldF")}${f("Cold R","coldR")}</div>
+    <div class="row" style="margin-top:10px">${f("Hot tgt F","hotF")}${f("Hot tgt R","hotR")}</div>
+    <div class="row" style="margin-top:10px">${f("Shock F","shockF","text")}${f("Shock R","shockR","text")}</div>
+    <div style="margin-top:10px"><label class="fl">Note</label>
+      <input class="txt" value="${esc(r.note||"")}" oninput="updRef('${r.id}','note',this.value)"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn ghost danger sm" style="flex:1;margin-top:0" onclick="delRef('${r.id}')">Delete</button>
+      <button class="btn primary sm" style="flex:2" onclick="doneRef('${r.id}')">Done</button>
+    </div>
+  </div>`;
+}
+function applyRef(sid){
+  const s=getS(sid); const r=findRef(s); if(!r)return;
+  const cf=strictNum(r.coldF), cr=strictNum(r.coldR);
+  if(cf!=null){s.cold.FL=cf;s.cold.FR=cf;}
+  if(cr!=null){s.cold.RL=cr;s.cold.RR=cr;}
+  const sf=strictNum(r.shockF), sr=strictNum(r.shockR);
+  s.runs.forEach(run=>{
+    if(!run.shock)run.shock={f:null,r:null};
+    if(run.shock.f==null&&sf!=null)run.shock.f=sf;
+    if(run.shock.r==null&&sr!=null)run.shock.r=sr;
+  });
+  const ht=strictNum(r.hotF), hr=strictNum(r.hotR);
+  if(ht!=null||hr!=null){const t=getTargets(s);if(ht!=null)t.front=ht;if(hr!=null)t.rear=hr;}
+  save();render();
+}
+function saveToRef(sid){
+  const s=getS(sid);
+  if(!String(s.track||"").trim()){alert("Name the track/event first — that's the site name.");return;}
+  const avg=(a,b)=>{const x=numOrNull(a),y=numOrNull(b);if(x==null&&y==null)return "";
+    if(x==null)return String(y);if(y==null)return String(x);return String(Math.round(((x+y)/2)*10)/10);};
+  const t=getTargets(s);
+  let sf="",sr="";
+  for(let j=s.runs.length-1;j>=0;j--){const sh=s.runs[j].shock;
+    if(sh&&(sh.f!=null||sh.r!=null)){sf=sh.f!=null?String(sh.f):"";sr=sh.r!=null?String(sh.r):"";break;}}
+  const vals={coldF:avg(s.cold.FL,s.cold.FR),coldR:avg(s.cold.RL,s.cold.RR),
+    hotF:String(t.front),hotR:String(t.rear),shockF:sf,shockR:sr};
+  const warn=(s.runs[0]&&s.runs[0].heat&&s.runs[0].heat!=="cold")
+    ?"\n\n⚠ First run wasn't a cold start — the cold number may be a warm-start number.":"";
+  const existing=findRef(s);
+  const msg=(existing?"Overwrite reference for "+existing.site:"Save new reference for "+s.track)+"?\n\n"+
+    "Cold "+(vals.coldF||"—")+" / "+(vals.coldR||"—")+
+    "\nHot target "+vals.hotF+" / "+vals.hotR+
+    "\nShocks "+(sf||"—")+" / "+(sr||"—")+warn;
+  if(!confirm(msg))return;
+  if(existing){Object.assign(existing,vals);existing.note="From "+s.date+" session";}
+  else DB.refs.push(Object.assign({id:uid(),profileId:s.profileId,type:s.type,site:s.track.trim(),note:"From "+s.date+" session"},vals));
+  save();alert("Saved to reference.");render();
+}
+
 function newSession(){
-  const s={id:uid(),date:todayStr(),type:"track",track:"",
-    cold:{FL:27,FR:27,RL:27,RR:27},coldTemp:{FL:"",FR:"",RL:"",RR:""},laps:"",runs:[]};
+  const p=activeP();
+  const prev=DB.sessions.find(x=>x.profileId===p.id);
+  const cold=prev?{...prev.cold}:{FL:30,FR:30,RL:30,RR:30};
+  const s={id:uid(),profileId:p.id,date:todayStr(),type:"track",track:"",
+    cold,coldTemp:{FL:"",FR:"",RL:"",RR:""},laps:"",runs:[]};
   DB.sessions.unshift(s);save();view={screen:"session",sid:s.id};render();
 }
 function nowTime(){const d=new Date();return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");}
+function seedShock(s){
+  if(s.runs.length){const sh=s.runs[s.runs.length-1].shock;if(sh)return {f:sh.f,r:sh.r};}
+  const r=findRef(s);
+  return {f:r?strictNum(r.shockF):null,r:r?strictNum(r.shockR):null};
+}
 function addRun(s){
   const base=s.runs.length?{...s.runs[s.runs.length-1].p}:{...s.cold};
   s.runs.push({id:uid(),label:"Run "+(s.runs.length+1),time:nowTime(),p:{...base},
-    temps:{FL:null,FR:null,RL:null,RR:null},showTemps:false});
+    temps:{FL:null,FR:null,RL:null,RR:null},showTemps:false,
+    heat:s.runs.length?"warm":"cold",shock:seedShock(s)});
   save();render();
 }
 
@@ -186,14 +388,25 @@ function render(){
   const back=document.getElementById("backBtn");
   const app=document.getElementById("app");
   const fab=document.getElementById("fab");
+  const badge=document.getElementById("badge");
+  badge.textContent=(activeP()||{}).tire||"";
   if(view.screen==="home"){
     document.getElementById("title").textContent="Tire Log";
     back.classList.add("hide");
-    DB.sessions.forEach(s=>{s._showOpts=false;});  // always re-enter sessions with options collapsed
+    DB.sessions.forEach(s=>{s._showOpts=false;});
     app.innerHTML=renderHome();
     fab.innerHTML=`<button class="btn primary" onclick="newSession()">＋ New Session</button>`;
+  }else if(view.screen==="ref"){
+    document.getElementById("title").textContent="Quick Reference";
+    back.classList.remove("hide");
+    back.onclick=()=>{view={screen:"home"};render();};
+    app.innerHTML=renderRef();
+    fab.innerHTML=`<div class="row">
+      <button class="btn sm" style="flex:1;padding:16px" onclick="addRef('autocross')">＋ Autocross site</button>
+      <button class="btn sm" style="flex:1;padding:16px" onclick="addRef('track')">＋ Track site</button></div>`;
   }else if(view.screen==="session"){
     const s=getS(view.sid);
+    badge.textContent=(sessP(s)||{}).tire||"";
     document.getElementById("title").textContent=(s.track||"Session");
     back.classList.remove("hide");
     back.onclick=()=>{view={screen:"home"};render();};
@@ -204,6 +417,7 @@ function render(){
       <button class="btn primary" style="flex:1.3" onclick="addRun(getS('${s.id}'))">＋ Run</button></div>`;
   }else if(view.screen==="analysis"){
     const s=getS(view.sid);
+    badge.textContent=(sessP(s)||{}).tire||"";
     document.getElementById("title").textContent="Analysis";
     back.classList.remove("hide");
     back.onclick=()=>{view={screen:"session",sid:s.id};render();};
@@ -222,11 +436,12 @@ function render(){
 
 function renderHome(){
   let h="";
+  const p=activeP();
   if(!DB.sessions.length){
     h+=`<div class="card"><h2>Welcome</h2>
-      <p class="muted">Tap <b style="color:var(--ink)">New Session</b> below to start logging.
-      Set a cold baseline before your first run, then add a run after each session for hot pressures
-      and optional pyrometer temps. Everything saves to this phone and works with no signal.</p></div>`;
+      <p class="muted">Pick your car/tire below, then tap <b style="color:var(--ink)">New Session</b>.
+      Set a cold baseline before your first run, then add a run after each session for hot pressures,
+      shocks, and optional pyrometer temps. Everything saves to this phone and works with no signal.</p></div>`;
   }
   if(needsBackupNudge()){
     h+=`<div class="nudge" onclick="backupAll()">
@@ -238,6 +453,18 @@ function renderHome(){
       <div class="nudgeArr">›</div>
     </div>`;
   }
+  h+=`<div class="card"><h2>🚗 Car / Tire</h2>
+    <p class="muted" style="margin-bottom:2px">New sessions and the reference sheet use this.</p>
+    ${profileSelect("setActiveProfile(this.value)",p.id)}
+    <div class="row" style="margin-top:10px">
+      <button class="btn ghost sm" style="flex:1" onclick="editProfile()">✎ Edit</button>
+      <button class="btn ghost sm" style="flex:1" onclick="addProfile()">＋ Add car/tire</button>
+    </div></div>`;
+  h+=`<div class="linkbtn" onclick="view={screen:'ref'};render()">
+    <span style="font-size:22px">📌</span>
+    <div style="flex:1"><div style="font-weight:800">Quick Reference</div>
+      <div class="muted">${esc(p.tire)} · pressures & shocks by site</div></div>
+    <span style="color:var(--accent2);font-size:22px">›</span></div>`;
   h+=`<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px">
       <div style="font-weight:800;font-size:14px;letter-spacing:.5px;color:var(--dim)">SESSIONS</div>
       <div style="flex:1"></div>
@@ -246,28 +473,22 @@ function renderHome(){
   DB.sessions.forEach(s=>{
     const tchip=s.type==="track"?"typ-track":"typ-autox";
     const tlab=s.type==="track"?"TRACK":"AUTOX";
+    const sp=sessP(s);
     h+=`<div class="sess-item" onclick="view={screen:'session',sid:'${s.id}'};render()">
       <span class="typchip ${tchip}">${tlab}</span>
-      <div class="meta"><div class="t">${s.track||"(untitled)"}</div>
-        <div class="muted">${s.date} · ${s.runs.length} run${s.runs.length===1?"":"s"}</div></div>
+      <div class="meta"><div class="t">${esc(s.track)||"(untitled)"}</div>
+        <div class="muted">${esc(s.date)} · ${esc(sp?sp.tire:"")} · ${s.runs.length} run${s.runs.length===1?"":"s"}</div></div>
       <span class="arrow">›</span></div>`;
   });
-  h+=`<div class="card" style="margin-top:16px"><h2>Quick Reference</h2>
-    <p class="ref">
-    <b>Track:</b> aim ~31–32 psi hot · start ~26–27 cold · climb +4–6 psi<br>
-    <b>Autocross:</b> ~30 F / 29 R · climb only +1–3 psi (set warmer cold)<br>
-    <b>Read hot</b> within 1–2 min of coming in.<br>
-    <b>Temps O/M/I:</b> center hotter = over (drop psi) · edges hotter = under (add psi) · even = dialed.
-    </p></div>`;
-  h+=`<div class="card"><h2>⚙ Tire Entry Order</h2>
-    <p class="muted" style="margin-bottom:8px">Order the tire boxes appear for entry. Clockwise matches a walk-around (LF→RF→RR→LR).</p>
+  h+=`<div class="card" style="margin-top:16px"><h2>⚙ Tire Entry Order</h2>
+    <p class="muted" style="margin-bottom:8px">Clockwise matches a walk-around (LF→RF→RR→LR).</p>
     <div class="seg">
       <button class="${((DB.settings&&DB.settings.tireOrder)||'grid')==='grid'?'on':''}" onclick="setTireOrderPref('grid')">Grid order</button>
       <button class="${(DB.settings&&DB.settings.tireOrder)==='clockwise'?'on':''}" onclick="setTireOrderPref('clockwise')">Clockwise</button>
     </div>
   </div>`;
   h+=`<div class="card"><h2>💾 Backup</h2>
-    <p class="muted" style="margin-bottom:10px">A full JSON backup that survives a browser clear or phone wipe. Restore merges into your current data.</p>
+    <p class="muted" style="margin-bottom:10px">Full JSON backup (sessions, car/tire profiles, reference sheet). Restore merges into your current data.</p>
     <div class="row">
       <button class="btn accent2 sm" style="flex:1" onclick="backupAll()">⬇ Backup all</button>
       <button class="btn ghost sm" style="flex:1" onclick="triggerRestore()">⬆ Restore</button>
@@ -276,13 +497,13 @@ function renderHome(){
     <input type="file" id="restoreFile" accept=".json,application/json" style="display:none" onchange="handleRestore(event)">
   </div>`;
   h+=`<div style="text-align:center;color:var(--dim);font-size:11px;margin:18px 0 4px;letter-spacing:.5px">
-    BRZ Tire Logger · build ${BUILD}</div>`;
+    Tire Logger · build ${BUILD}</div>`;
   return h;
 }
 
 function renderSession(s){
   let h="";
-  // meta
+  const sp=sessP(s);
   h+=`<div class="card">
     <div class="seg">
       <button class="${s.type==='track'?'on':''}" onclick="setType('${s.id}','track')">Track</button>
@@ -290,8 +511,12 @@ function renderSession(s){
     </div>
     <div style="margin-top:12px">
       <label class="fl">Track / Event</label>
-      <input class="txt" placeholder="e.g. North Wilkesboro" value="${esc(s.track)}"
-        oninput="upd('${s.id}','track',this.value)">
+      <input class="txt" placeholder="e.g. CMP" value="${esc(s.track)}"
+        oninput="upd('${s.id}','track',this.value)" onchange="render()">
+    </div>
+    <div style="margin-top:10px">
+      <label class="fl">Car / Tire</label>
+      ${profileSelect("upd('"+s.id+"','profileId',this.value);render()",s.profileId)}
     </div>
     <div class="row" style="margin-top:10px">
       <div style="flex:1"><label class="fl">Date</label>
@@ -300,6 +525,18 @@ function renderSession(s){
         <input class="txt" inputmode="numeric" placeholder="e.g. 6" value="${esc(s.laps||"")}" oninput="upd('${s.id}','laps',this.value)"></div>`:""}
     </div>
   </div>`;
+  // reference hint
+  const ref=findRef(s);
+  if(ref){
+    const canApply=[ref.coldF,ref.coldR,ref.shockF,ref.shockR,ref.hotF,ref.hotR].some(v=>strictNum(v)!=null);
+    h+=`<div class="refhint">
+      <div class="rh">📌 REFERENCE · ${esc(ref.site)}</div>
+      <div class="rb">Cold ${dash(ref.coldF)} / ${dash(ref.coldR)} · Hot ${dash(ref.hotF)} / ${dash(ref.hotR)}</div>
+      <div class="rb">Shocks ${dash(ref.shockF)} / ${dash(ref.shockR)}</div>
+      ${ref.note?`<div class="muted" style="margin-top:4px">${esc(ref.note)}</div>`:""}
+      ${canApply?`<button class="btn accent2 sm" style="margin-top:10px" onclick="applyRef('${s.id}')">Apply to this session</button>`:""}
+    </div>`;
+  }
   // cold baseline
   h+=`<div class="card">
     <h2>❄ Cold Baseline (PSI)</h2>
@@ -311,7 +548,7 @@ function renderSession(s){
   h+=`</div>
     <div style="margin-top:14px">
       <label class="fl">❄ Cold Tire Temp °F (optional)</label>
-      <p class="muted" style="margin:4px 0 8px">Per corner — sun on one side warms those tires more. Builds data for predicting set pressures later.</p>
+      <p class="muted" style="margin:4px 0 8px">Per corner — sun on one side warms those tires more.</p>
       <div class="grid2">`;
   tireOrder().forEach(([k,lab])=>{
     const cv=(s.coldTemp&&s.coldTemp[k]!=null)?s.coldTemp[k]:"";
@@ -324,6 +561,8 @@ function renderSession(s){
   </div>`;
   // runs
   s.runs.forEach((run,idx)=>{
+    const heat=run.heat||"";
+    const sh=run.shock||{f:null,r:null};
     h+=`<div class="card">
       <div class="run-head">
         <input class="txt" style="margin:0;flex:1.6;font-weight:800;padding:9px"
@@ -331,6 +570,15 @@ function renderSession(s){
         <input class="txt" style="margin:0;flex:1;padding:9px;text-align:center" inputmode="text"
           placeholder="time" value="${esc(run.time||"")}" oninput="updRun('${s.id}','${run.id}','time',this.value)">
         <span class="del" onclick="delRun('${s.id}','${run.id}')">✕</span>
+      </div>
+      <div class="gridlab">TIRE STATE AT START</div>
+      <div class="seg s3">
+        ${["cold","warm","hot"].map(v=>`<button class="${heat===v?'on':''}" onclick="setHeat('${s.id}','${run.id}','${v}')">${v[0].toUpperCase()+v.slice(1)}</button>`).join("")}
+      </div>
+      <div class="gridlab">SHOCKS${sp&&sp.shockUnit?" · "+esc(sp.shockUnit).toUpperCase():""}</div>
+      <div class="grid2">
+        ${shockStepper(s.id,run.id,"f","Front",sh.f)}
+        ${shockStepper(s.id,run.id,"r","Rear",sh.r)}
       </div>
       <div class="wxrow">
         <div class="wxfield">
@@ -353,7 +601,6 @@ function renderSession(s){
           ${(!own&&carried!=null)?`<p class="muted" style="margin-top:5px">Using ${carried}° from a recent run. Enter a value only if it changed.</p>`:""}
         </div>`;
       })()}`;
-    // set (pre-run) pressure toggle — sits ABOVE hot pressures (you set, then run)
     h+=`<div class="toggle-temps" onclick="toggleSet('${s.id}','${run.id}')">
       ${run.showSet?"▴ hide pre-run set pressure":"▾ set pre-run pressure (warm)"}</div>`;
     if(run.showSet){
@@ -371,7 +618,6 @@ function renderSession(s){
       h+=tireStepper(s.id,run.id,k,lab,run.p[k],0.5,s.cold[k],setv);
     });
     h+=`</div>`;
-    // temps toggle
     h+=`<div class="toggle-temps" onclick="toggleTemps('${s.id}','${run.id}')">
       ${run.showTemps?"▴ hide tire temps":"▾ add tire temps (pyrometer)"}</div>`;
     if(run.showTemps){
@@ -384,13 +630,13 @@ function renderSession(s){
     h+=`<div style="margin-top:10px">
       <label class="fl">Setup notes / changes (optional)</label>
       <textarea class="txt" rows="2" style="resize:vertical;min-height:46px"
-        placeholder="e.g. front bar to stiff, -2 psi RR, tires greasy by lap 3"
+        placeholder="e.g. -2 psi RR, tires greasy by lap 3"
         oninput="updRun('${s.id}','${run.id}','notes',this.value)">${esc(run.notes||"")}</textarea>
     </div>`;
     h+=`</div>`;
   });
   if(!s.runs.length){
-    h+=`<p class="small-note">No runs yet — tap “Add Run” after your first session.</p>`;
+    h+=`<p class="small-note">No runs yet — tap “Run” after your first session.</p>`;
   }
   h+=`<div class="toggle-temps" style="margin-top:18px" onclick="toggleOpts('${s.id}')">
     ${s._showOpts?"▴ hide session options":"▾ session options"}</div>`;
@@ -404,35 +650,36 @@ function renderSession(s){
 }
 
 /* ---------- ANALYSIS ---------- */
-// default reference targets — a STARTING POINT, fully overridable per session.
-function defaultTargets(type){
-  return type==="autocross"
-    ? {front:30, rear:29}   // autox ref
-    : {front:31.5, rear:31.5}; // track ref (~31–32)
+// target starts from the reference sheet if this site has one, else the last target used
+// for this car/tire + type, else 30/30. Always overridable.
+function defaultTargets(s){
+  const r=findRef(s);
+  if(r){const f=strictNum(r.hotF),rr=strictNum(r.hotR);if(f!=null||rr!=null)return {front:f!=null?f:30,rear:rr!=null?rr:30};}
+  const prev=DB.sessions.find(x=>x.id!==s.id&&x.profileId===s.profileId&&x.type===s.type&&x.targets);
+  if(prev)return {front:prev.targets.front,rear:prev.targets.rear};
+  return {front:30,rear:30};
 }
 function getTargets(s){
-  if(!s.targets) s.targets=defaultTargets(s.type);
+  if(!s.targets) s.targets=defaultTargets(s);
   return s.targets;
 }
 function bumpTarget(sid,axle,d){
   const s=getS(sid); const t=getTargets(s);
   let nv=Math.round((t[axle]+d)*10)/10;
-  if(nv<10)nv=10; if(nv>50)nv=50;
+  if(nv<10)nv=10; if(nv>60)nv=60;
   t[axle]=nv; save(); render();
 }
 function resetTargets(sid){
-  const s=getS(sid); s.targets=defaultTargets(s.type); save(); render();
+  const s=getS(sid); s.targets=null; s.targets=defaultTargets(s); save(); render();
 }
 
 function renderAnalysis(s){
   const t=getTargets(s);
   let h="";
-
-  // header / philosophy reminder
   h+=`<div class="card">
     <h2>📊 ${esc(s.track||"Session")} — Analysis</h2>
-    <p class="muted">${s.date} · ${s.type==="track"?"Track":"Autocross"} · ${s.runs.length} run${s.runs.length===1?"":"s"}.
-    Targets below are a <b style="color:var(--ink)">movable reference</b>, not a rule. Chase feel + even temps; set the line to whatever's actually winning for you.</p>
+    <p class="muted">${esc(s.date)} · ${s.type==="track"?"Track":"Autocross"} · ${esc(pLabel(sessP(s)))} · ${s.runs.length} run${s.runs.length===1?"":"s"}.
+    Targets are a <b style="color:var(--ink)">movable reference</b>, not a rule.</p>
   </div>`;
 
   if(!s.runs.length){
@@ -440,7 +687,6 @@ function renderAnalysis(s){
     return h;
   }
 
-  // ---- adjustable target line ----
   h+=`<div class="card">
     <h2>🎯 Your Target Line (PSI hot)</h2>
     <div class="tgtrow">
@@ -461,13 +707,12 @@ function renderAnalysis(s){
         </div>
       </div>
     </div>
-    <div class="toggle-temps" onclick="resetTargets('${s.id}')">↺ reset to ${s.type==="track"?"track":"autox"} reference</div>
+    <div class="toggle-temps" onclick="resetTargets('${s.id}')">↺ reset to reference</div>
   </div>`;
 
-  // ---- per-tire climb tracker ----
   h+=`<div class="card">
     <h2>🌡 Pressure Climb by Corner</h2>
-    <p class="muted" style="margin-bottom:8px">Cold → latest hot, and gap to your target line. Gap is info, not judgment.</p>
+    <p class="muted" style="margin-bottom:8px">Cold → latest hot, and gap to your target line.</p>
     <div class="grid2">`;
   tireOrder().forEach(([k,lab])=>{
     const cold=numOrNull(s.cold[k]);
@@ -477,9 +722,7 @@ function renderAnalysis(s){
     const tgt=t[axle];
     const climb=(cold!=null&&hot!=null)?Math.round((hot-cold)*10)/10:null;
     const gap=(hot!=null)?Math.round((hot-tgt)*10)/10:null;
-    // build sparkline-ish trend of hot across runs
     const series=s.runs.map(r=>numOrNull(r.p[k])).filter(v=>v!=null);
-    // equilibrium: climb vs the set pressure on the latest run that has one
     const lastSet=(last.set!=null)?numOrNull(last.set[k]):null;
     const vsSet=(lastSet!=null&&hot!=null)?Math.round((hot-lastSet)*10)/10:null;
     let eqHtml="";
@@ -506,12 +749,11 @@ function renderAnalysis(s){
   });
   h+=`</div></div>`;
 
-  // ---- temp spread (truth-teller) ----
   const runsWithTemps=s.runs.filter(r=>TIRES.some(([k])=>tempFlag(r.temps[k])!=null));
   if(runsWithTemps.length){
     h+=`<div class="card">
-      <h2>🔥 Tire Temp Spread <span class="muted" style="text-transform:none;font-weight:600">— the real signal</span></h2>
-      <p class="muted" style="margin-bottom:8px">Even O/M/I = dialed, whatever the gauge says. This beats the psi target every time.</p>`;
+      <h2>🔥 Tire Temp Spread</h2>
+      <p class="muted" style="margin-bottom:8px">Even O/M/I = dialed, whatever the gauge says.</p>`;
     const last=runsWithTemps[runsWithTemps.length-1];
     h+=`<p class="muted" style="margin-bottom:6px">Latest with temps: <b style="color:var(--ink)">${esc(last.label)}</b></p>
       <div class="grid2">`;
@@ -524,7 +766,7 @@ function renderAnalysis(s){
       const tt=last.temps[k]||{o:"",m:"",i:""};
       h+=`<div class="tire">
         <div class="lab">${lab}</div>
-        <div class="tspread">${tt.o||"—"} / ${tt.m||"—"} / ${tt.i||"—"}</div>
+        <div class="tspread">${esc(tt.o)||"—"} / ${esc(tt.m)||"—"} / ${esc(tt.i)||"—"}</div>
         <div class="asub">O / M / I °F</div>
         <div class="flag ${cls}">${txt}</div>
       </div>`;
@@ -532,19 +774,20 @@ function renderAnalysis(s){
     h+=`</div></div>`;
   }
 
-  // ---- notes timeline (cause → effect) ----
   h+=`<div class="card">
     <h2>📝 What Changed → What Happened</h2>`;
   let anyNotes=false;
   s.runs.forEach(run=>{
-    const fp=run.p.FL, rp=run.p.RL;
-    const psiTxt=`F${fmt(fp)} / R${fmt(rp)}`;
+    const psiTxt=`F${fmt(run.p.FL)} / R${fmt(run.p.RL)}`;
+    const sh=run.shock||{};
+    const shTxt=(sh.f!=null||sh.r!=null)?` · shk ${fmtS(sh.f)}/${fmtS(sh.r)}`:"";
+    const hTxt=run.heat?` · ${run.heat} start`:"";
     const note=(run.notes||"").trim();
     if(note) anyNotes=true;
     h+=`<div class="tline">
       <div class="tdot"></div>
       <div class="tbody">
-        <div class="thead"><b>${esc(run.label)}</b> <span class="muted">${esc(run.time||"")} · ${psiTxt}</span></div>
+        <div class="thead"><b>${esc(run.label)}</b> <span class="muted">${esc(run.time||"")} · ${psiTxt}${shTxt}${hTxt}</span></div>
         ${note?`<div class="tnote">${esc(note)}</div>`:`<div class="tnote muted">no notes</div>`}
       </div>
     </div>`;
@@ -553,6 +796,12 @@ function renderAnalysis(s){
     h+=`<p class="muted" style="margin-top:4px">Add setup notes per run to build your cause→effect history here.</p>`;
   }
   h+=`</div>`;
+
+  h+=`<div class="card">
+    <h2>📌 Save to Reference</h2>
+    <p class="muted" style="margin-bottom:10px">Writes this session's cold baseline (axle avg), your target line, and the last logged shocks to the reference sheet for ${esc(s.track||"this site")} · ${esc((sessP(s)||{}).tire||"")}.</p>
+    <button class="btn accent2 sm" onclick="saveToRef('${s.id}')">📌 Save as reference</button>
+  </div>`;
 
   return h;
 }
@@ -579,13 +828,22 @@ function tireStepper(sid,rk,tk,lab,val,step,cold,setv){
     </div>${climb}</div>`;
 }
 
-// dedicated stepper for the pre-run SET pressure (writes to run.set[])
 function setStepper(sid,rid,tk,lab,val){
   return `<div class="tire" style="background:var(--bg)"><div class="lab">${lab} SET</div>
     <div class="stepper">
       <button onclick="stepSet('${sid}','${rid}','${tk}',-0.5)">−</button>
       <div class="val">${fmt(val)}<small>psi set</small></div>
       <button onclick="stepSet('${sid}','${rid}','${tk}',0.5)">＋</button>
+    </div></div>`;
+}
+
+// shock stepper — quarter-turn steps; first tap on an empty value seeds from prior run / reference / 1.0
+function shockStepper(sid,rid,axle,lab,val){
+  return `<div class="tire"><div class="lab">${lab.toUpperCase()} SHOCK</div>
+    <div class="stepper">
+      <button onclick="stepShock('${sid}','${rid}','${axle}',-0.25)">−</button>
+      <div class="val">${fmtS(val)}<small>&nbsp;</small></div>
+      <button onclick="stepShock('${sid}','${rid}','${axle}',0.25)">＋</button>
     </div></div>`;
 }
 
@@ -597,13 +855,12 @@ function tempCell(sid,rid,tk,lab,t){
   else if(flag==="over"){fcls="over";ftxt="OVER · drop psi";}
   else if(flag==="under"){fcls="under";ftxt="UNDER · add psi";}
   const mk=(field,v)=>`<div class="tcell"><div class="tl">${field.toUpperCase()}</div>
-    <input class="tinp tinp-seq" id="tmp_${rid}_${tk}_${field}" inputmode="numeric" value="${v===""?"":v}" placeholder="—"
+    <input class="tinp tinp-seq" id="tmp_${rid}_${tk}_${field}" inputmode="numeric" value="${v===""||v==null?"":esc(v)}" placeholder="—"
       oninput="setTemp('${sid}','${rid}','${tk}','${field}',this.value);advTemp(this)"></div>`;
   return `<div class="tire"><div class="lab">${lab} TEMP °F</div>
     <div class="temprow">${mk("o",t.o)}${mk("m",t.m)}${mk("i",t.i)}</div>
     <div class="flag ${fcls}">${ftxt}</div></div>`;
 }
-// auto-advance: when an input reaches 3 digits, jump focus to the next temp field in DOM order
 function advTemp(el){
   const v=(el.value||"").replace(/[^0-9.]/g,"");
   if(v.length>=3){
@@ -624,7 +881,7 @@ function tempFlag(t){
 }
 
 /* ---------- mutations ---------- */
-function setType(id,t){getS(id).type=t;save();render();}
+function setType(id,t){const s=getS(id);s.type=t;save();render();}
 function upd(id,f,v){getS(id)[f]=v;save();}
 function setTireOrderPref(v){
   if(!DB.settings) DB.settings={};
@@ -632,16 +889,33 @@ function setTireOrderPref(v){
 }
 function setColdTemp(sid,tk,v){
   const s=getS(sid);
-  // migrate old string-format coldTemp to per-tire object if needed
   if(s.coldTemp==null||typeof s.coldTemp!=="object") s.coldTemp={FL:"",FR:"",RL:"",RR:""};
   s.coldTemp[tk]=v.replace(/[^0-9.]/g,"");
   save();
 }
 function updRun(sid,rid,f,v){const r=getS(sid).runs.find(x=>x.id===rid);r[f]=v;save();}
+function setHeat(sid,rid,v){const r=getS(sid).runs.find(x=>x.id===rid);r.heat=(r.heat===v)?"":v;save();render();}
+function stepShock(sid,rid,axle,d){
+  const s=getS(sid); const idx=s.runs.findIndex(x=>x.id===rid); const r=s.runs[idx];
+  if(!r.shock)r.shock={f:null,r:null};
+  const cur=numOrNull(r.shock[axle]);
+  if(cur==null){
+    // seed: previous run's value, else reference, else 1.0 — no step on the seeding tap
+    let base=null;
+    for(let j=idx-1;j>=0&&base==null;j--){const ps=s.runs[j].shock;if(ps)base=numOrNull(ps[axle]);}
+    if(base==null){const ref=findRef(s);if(ref)base=strictNum(axle==="f"?ref.shockF:ref.shockR);}
+    r.shock[axle]=base!=null?base:1;
+  }else{
+    let nv=Math.round((cur+d)*100)/100;
+    if(nv<0)nv=0; if(nv>40)nv=40;
+    r.shock[axle]=nv;
+  }
+  save();render();
+}
 function step(sid,rk,tk,d){
   const s=getS(sid);
   let obj=rk==="cold"?s.cold:s.runs.find(r=>r.id===rk).p;
-  let nv=Math.round(((obj[tk]||0)+d)*10)/10;
+  let nv=Math.round(((numOrNull(obj[tk])||0)+d)*10)/10;
   if(nv<0)nv=0; if(nv>60)nv=60;
   obj[tk]=nv;save();render();
 }
@@ -650,7 +924,6 @@ function toggleOpts(sid){const s=getS(sid);s._showOpts=!s._showOpts;render();}
 function toggleSet(sid,rid){
   const s=getS(sid); const r=s.runs.find(x=>x.id===rid);
   r.showSet=!r.showSet;
-  // when first opening, seed set[] from previous run's HOT (what you're bleeding from), else cold
   if(r.showSet && !r.set){
     const idx=s.runs.findIndex(x=>x.id===rid);
     const base=idx>0 ? {...s.runs[idx-1].p} : {...s.cold};
@@ -661,7 +934,7 @@ function toggleSet(sid,rid){
 function stepSet(sid,rid,tk,d){
   const s=getS(sid); const r=s.runs.find(x=>x.id===rid);
   if(!r.set) r.set={...s.cold};
-  let nv=Math.round(((r.set[tk]||0)+d)*10)/10;
+  let nv=Math.round(((numOrNull(r.set[tk])||0)+d)*10)/10;
   if(nv<0)nv=0; if(nv>60)nv=60;
   r.set[tk]=nv; save(); render();
 }
@@ -671,7 +944,6 @@ function setTemp(sid,rid,tk,field,v){
   r.temps[tk][field]=v.replace(/[^0-9.]/g,"");save();
 }
 /* ---------- GPS WEATHER (Open-Meteo, no key) ---------- */
-// WMO weather code → plain label. Grouped to what matters for tire data.
 function wmoLabel(code){
   if(code==null||isNaN(code)) return "";
   const c=Number(code);
@@ -723,11 +995,9 @@ function grabWeather(sid,rid,btn){
           r.ambient=String(t);
           r.gps={lat:lat,lon:lon,at:nowTime()};
           if(cond) r.gps.cond=cond;
-          // stamp the time too if empty, so the reading is anchored
           if(!r.time) r.time=nowTime();
           save();
           setBtn("✓ "+t+"°F"+(cond?" "+condIcon(d.current.weather_code):""));
-          // reverse-geocode for nearest city/state (independent; failure is harmless)
           const geoUrl="https://api.bigdatacloud.net/data/reverse-geocode-client?latitude="+
             lat+"&longitude="+lon+"&localityLanguage=en";
           fetch(geoUrl)
@@ -747,13 +1017,11 @@ function grabWeather(sid,rid,btn){
             .finally(()=>{setTimeout(()=>{render();},700);});
         })
         .catch(e=>{
-          // no signal / API down — fail soft, keep manual entry
           setBtn("no signal — type it");
           setTimeout(()=>setBtn(orig),3000);
         });
     },
     err=>{
-      // permission denied or GPS unavailable
       const msg = err && err.code===1 ? "allow location" : "GPS failed";
       setBtn(msg);
       setTimeout(()=>setBtn(orig),3000);
@@ -777,28 +1045,23 @@ function delSession(sid){
 }
 
 /* ---------- helpers ---------- */
-// parse "HH:MM" to minutes since midnight; null if unparseable
 function timeToMin(t){
   if(!t) return null;
   const m=String(t).match(/(\d{1,2}):(\d{2})/);
   if(!m) return null;
   return parseInt(m[1],10)*60+parseInt(m[2],10);
 }
-// carry-forward track temp: most recent PRIOR run with a track temp, if within 30 min.
-// returns the carried number, or null if none qualifies.
 function carriedTrackTemp(s,idx){
   const cur=s.runs[idx];
   const curMin=timeToMin(cur&&cur.time);
   for(let j=idx-1;j>=0;j--){
     const pr=s.runs[j];
     if(pr.trackTemp!=null&&pr.trackTemp!==""){
-      // found the most recent prior entered value; check time gap
       const prMin=timeToMin(pr.time);
       if(curMin!=null&&prMin!=null){
         if(Math.abs(curMin-prMin)<=30) return pr.trackTemp;
-        return null; // too long ago — track likely changed, don't carry
+        return null;
       }
-      // if either time missing, fall back to carrying (best effort)
       return pr.trackTemp;
     }
   }
@@ -810,39 +1073,48 @@ function fmt(v){
   if(isNaN(n)) return "—";
   return Number.isInteger(n)?n:n.toFixed(1);
 }
-// coerce a value (number or numeric string) to a number, or null if not numeric
+// shocks need two decimals (1.25, 0.75)
+function fmtS(v){
+  const n=numOrNull(v);
+  if(n==null) return "—";
+  return String(Math.round(n*100)/100);
+}
 function numOrNull(v){
   if(v==null||v==="") return null;
   const n=(typeof v==="number")?v:parseFloat(v);
   return isNaN(n)?null:n;
 }
-function esc(s){return (s==null?"":String(s)).replace(/"/g,"&quot;").replace(/</g,"&lt;");}
+function esc(s){return (s==null?"":String(s)).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");}
 
 /* ---------- CSV export ---------- */
+// New columns (Car, Tire, ShockF, ShockR, HeatState) are appended at the END so
+// existing workbook column positions don't move.
 function rowsFor(s){
   const rows=[];
   const lp=s.laps||"";
-  // per-tire cold temp; tolerate old single-string format
+  const sp=sessP(s)||{};
+  const car=sp.car||"", tire=sp.tire||"";
   const ctFor=(k)=>{
     if(s.coldTemp==null) return "";
     if(typeof s.coldTemp==="object") return s.coldTemp[k]!=null?s.coldTemp[k]:"";
-    return s.coldTemp; // legacy single value applies to all tires
+    return s.coldTemp;
   };
   TIRES.forEach(([k,lab])=>{
     rows.push([s.date,"",s.type,s.track,"",(s.trackTemp||""),"COLD",lab,
-      s.cold[k],"","","","","","","","","","","","",ctFor(k),lp,""]);
+      s.cold[k],"","","","","","","","","","","","",ctFor(k),lp,"",
+      car,tire,"","",""]);
   });
   s.runs.forEach((run,idx)=>{
-    // resolve track temp: own value, else carried (within 30 min), else blank
     const ownTT=(run.trackTemp!=null&&run.trackTemp!=="")?run.trackTemp:"";
-    const resolvedTT=ownTT!==""?ownTT:(carriedTrackTemp(s,idx)!=null?carriedTrackTemp(s,idx):"");
+    const ctt=carriedTrackTemp(s,idx);
+    const resolvedTT=ownTT!==""?ownTT:(ctt!=null?ctt:"");
+    const sh=run.shock||{};
     TIRES.forEach(([k,lab])=>{
       const cold=s.cold[k], hot=run.p[k];
-      // set pressure: explicit value if bled; else auto-fill the CARRIED hot (prev run's hot for this tire)
       let setv;
       if(run.set&&typeof run.set[k]==="number"){ setv=run.set[k]; }
-      else if(idx>0 && typeof s.runs[idx-1].p[k]==="number"){ setv=s.runs[idx-1].p[k]; } // carried, unbled
-      else { setv=(typeof cold==="number")?cold:""; } // first run: carried from cold baseline
+      else if(idx>0 && typeof s.runs[idx-1].p[k]==="number"){ setv=s.runs[idx-1].p[k]; }
+      else { setv=(typeof cold==="number")?cold:""; }
       const climb=(typeof cold==="number"&&typeof hot==="number")?Math.round((hot-cold)*10)/10:"";
       const climbSet=(typeof setv==="number"&&typeof hot==="number")?Math.round((hot-setv)*10)/10:"";
       const t=run.temps[k]||{o:"",m:"",i:""};
@@ -853,13 +1125,15 @@ function rowsFor(s){
       const place=run.gps&&run.gps.place?run.gps.place:"";
       const cond=run.gps&&run.gps.cond?run.gps.cond:"";
       rows.push([s.date,run.time||"",s.type,s.track,amb,resolvedTT,run.label,lab,
-        hot,setv,cold,climbSet,climb,t.o,t.m,t.i,fl,run.notes||"",lat,lon,place,ctFor(k),lp,cond]);
+        hot,setv,cold,climbSet,climb,t.o,t.m,t.i,fl,run.notes||"",lat,lon,place,ctFor(k),lp,cond,
+        car,tire,sh.f!=null?sh.f:"",sh.r!=null?sh.r:"",run.heat||""]);
     });
   });
   return rows;
 }
 const HEAD=["Date","Time","Type","Track","Ambient_F","TrackTemp_F","Session","Tire",
-  "PSI","SetPSI","ColdPSI","ClimbVsSet","Climb","Temp_Outer","Temp_Mid","Temp_Inner","Flag","Notes","Lat","Lon","Location","ColdTemp_F","Laps","Condition"];
+  "PSI","SetPSI","ColdPSI","ClimbVsSet","Climb","Temp_Outer","Temp_Mid","Temp_Inner","Flag","Notes","Lat","Lon","Location","ColdTemp_F","Laps","Condition",
+  "Car","TireModel","ShockF","ShockR","HeatState"];
 function toCSV(rows){
   const all=[HEAD,...rows];
   return all.map(r=>r.map(c=>{
@@ -877,7 +1151,6 @@ function download(name,text){
 function exportOne(id){const s=getS(id);
   const nm=(s.track||"session").replace(/\s+/g,"_");
   const ty=s.type==="autocross"?"autox":"track";
-  // time-of-day: first run's time if present, else now; strip colon
   const tod=((s.runs[0]&&s.runs[0].time)?s.runs[0].time:nowTime()).replace(/[^0-9]/g,"");
   download(nm+"_"+ty+"_"+s.date+"_"+tod+".csv",toCSV(rowsFor(s)));}
 function exportAll(){
@@ -886,10 +1159,8 @@ function exportAll(){
 }
 
 /* ---------- BACKUP / RESTORE (JSON) ---------- */
-// Full-fidelity dump that survives a localStorage wipe.
-// Restore merges by session id: existing sessions are updated, new ones added.
 function backupAll(){
-  const blob={version:1,exported:new Date().toISOString(),db:DB};
+  const blob={version:2,exported:new Date().toISOString(),db:DB};
   const text=JSON.stringify(blob,null,2);
   const b=new Blob([text],{type:"application/json"});
   const url=URL.createObjectURL(b);
@@ -900,20 +1171,28 @@ function backupAll(){
   DB.lastBackup=Date.now(); save(); render();
 }
 function triggerRestore(){document.getElementById("restoreFile").click();}
+function mergeById(target,incoming){
+  let added=0,updated=0;
+  incoming.forEach(n=>{
+    if(!n||!n.id)return;
+    const i=target.findIndex(x=>x.id===n.id);
+    if(i>=0){target[i]=n;updated++;}else{target.unshift(n);added++;}
+  });
+  return [added,updated];
+}
 function handleRestore(ev){
   const f=ev.target.files&&ev.target.files[0]; if(!f) return;
   const r=new FileReader();
   r.onload=()=>{
     try{
       const data=JSON.parse(r.result);
-      const incoming=(data&&data.db&&Array.isArray(data.db.sessions))?data.db.sessions:null;
-      if(!incoming) throw new Error("not a tire_log backup file");
-      let added=0,updated=0;
-      incoming.forEach(ns=>{
-        const i=DB.sessions.findIndex(s=>s.id===ns.id);
-        if(i>=0){DB.sessions[i]=ns;updated++;}
-        else{DB.sessions.unshift(ns);added++;}
-      });
+      const inc=data&&data.db;
+      if(!inc||!Array.isArray(inc.sessions)) throw new Error("not a tire_log backup file");
+      // profiles/refs first so restored sessions find their profile
+      if(Array.isArray(inc.profiles)) mergeById(DB.profiles,inc.profiles);
+      if(Array.isArray(inc.refs)) mergeById(DB.refs,inc.refs);
+      const [added,updated]=mergeById(DB.sessions,inc.sessions);
+      migrate(); // old v1 backups: tags sessions as RT660+
       save();
       alert("Restore complete\n+"+added+" new · "+updated+" updated");
       render();
@@ -923,7 +1202,6 @@ function handleRestore(ev){
   r.readAsText(f);
 }
 function needsBackupNudge(){
-  // nudge if there are runs and either never backed up, or last backup > 24h ago
   const hasRuns=DB.sessions.some(s=>s.runs&&s.runs.length>0);
   if(!hasRuns) return false;
   if(!DB.lastBackup) return true;
@@ -942,14 +1220,11 @@ function backupAgeText(){
 
 /* ---------- save safety nets ---------- */
 function flushSave(){try{localStorage.setItem(KEY,JSON.stringify(DB));}catch(e){}}
-// final save whenever the page is hidden, backgrounded, or closed
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")flushSave();});
 window.addEventListener("pagehide",flushSave);
 window.addEventListener("beforeunload",flushSave);
 window.addEventListener("blur",flushSave);
-// save when leaving any text field
 document.addEventListener("focusout",flushSave,true);
-// periodic autosave every 3s as a backstop
 setInterval(flushSave,3000);
 
 load();render();
